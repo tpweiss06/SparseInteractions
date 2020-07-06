@@ -1,6 +1,7 @@
 # Use this script to evaluate the current fit of the model from the server
+library(rstan)
 
-
+load("ModelFits/Current_BH_FH_Phos_fit.rdata")
 
 # Evaluate the model fit for convergence, mixing, autocorrelation, etc.
 PrelimFit
@@ -36,24 +37,24 @@ plot(PrelimFit, show_density = FALSE, ci_level = 0.5, outer_level = 0.95,
 #    but, I think it should work as a rule of thumb for including "important" interactions in our
 #    downstream analyses.
 # Plot the paramters to be included by using the IQR of the shrinkage coefficients
-QuantVals <- matrix(data = NA, nrow = 2, ncol = S)
+QuantVals <- matrix(data = NA, nrow = S, ncol = 2)
 for(s in 1:S){
-     QuantVals[,s] <- HDInterval::hdi(1-ShrinkageCoef[,s], credMass = 0.9)
+     QuantVals[s,] <- HDInterval::hdi(1-ShrinkCoef[,s], credMass = 0.9)
 }
-ShrinkageInclusionCols <- ifelse(QuantVals[1,] > 0.5, "green", "red")
+ShrinkageInclusionCols <- ifelse(QuantVals[,1] > 0.5, "green", "red")
 quartz()
 plot(PrelimFit, show_density = FALSE, ci_level = 0.5, outer_level = 0.95, 
-     fill_color = ShrinkageInclusionCols, pars = c("alpha_sp"))
+     pars = c("alpha_sp_phos"), fill_color = ShrinkageInclusionCols)
 
 # Now take a look at an alternative inclusion criteria based on the posterior distributions directly
 PosteriorInclusionCols <- rep(NA, S)
 for(s in 1:S){
-     IntVals <- HDInterval::hdi(PrelimPosteriors$alpha_sp[,s], credMass = 0.8)
+     IntVals <- HDInterval::hdi(PrelimPosteriors$alpha_sp_phos[,s], credMass = 0.8)
      PosteriorInclusionCols[s] <- ifelse(IntVals[1] > 0 | IntVals[2] < 0, "green", "red")
 }
 quartz()
 plot(PrelimFit, show_density = FALSE, ci_level = 0.5, outer_level = 0.95, 
-     fill_color = PosteriorInclusionCols, pars = c("alpha_sp"))
+     fill_color = PosteriorInclusionCols, pars = c("alpha_sp_phos"))
 
 # If we combine these approaches, here are the parameters we would include
 InclusionCols <- rep(NA, S)
