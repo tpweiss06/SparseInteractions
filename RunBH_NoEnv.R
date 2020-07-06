@@ -43,10 +43,10 @@ tau0 <- 1
 slab_scale <- log(2)
 slab_df <- 25 # follows the online implementation. this might need tuning
 DataVec <- c("N", "S", "Fecundity", "SpMatrix", "tau0", "slab_scale", "slab_df")
-PrelimFit <- stan(file = "BevertonHolt_FinnishHorseshoe.stan", data = DataVec, iter = 6000,
+PrelimFit <- stan(file = "BH_FH_NoEnv.stan", data = DataVec, iter = 6000,
                   chains = 3)
-save(PrelimFit, file = "~/Desktop/Wyoming/Advising/Cath/Troubleshooting/fitted_model_CompetitionOnly.rdata")
-# mean tau = 2.9
+save(PrelimFit, file = "~/Desktop/Wyoming/SparseInteractions/ModelFits/FH_NoEnv_PrelimFit.rdata")
+
 # Evaluate the model fit for convergence, mixing, autocorrelation, etc.
 PrelimFit
 PrelimPosteriors <- rstan::extract(PrelimFit)
@@ -162,7 +162,7 @@ Inclusion <- ifelse(InclusionCols == "green", 1, 0)
 S_total <- S
 S_eff <- sum(Inclusion)
 DataVec <- c("N", "S_total", "S_eff", "Inclusion", "Fecundity", "SpMatrix")
-FinalFit <- stan(file = "BevertonHolt_NoEnv.stan", data = DataVec, iter = 6000,
+FinalFit <- stan(file = "BH_NoEnv.stan", data = DataVec, iter = 6000,
                  chains = 3, control = list(adapt_delta = 0.9))
 # Evaluate the model fit for convergence, mixing, autocorrelation, etc.
 FinalFit
@@ -211,3 +211,4 @@ HDInterval::hdi(FinalPosteriors$alpha_hat)
 # HDI for alpha_hat: -5.26 - -4.00 (Prelim)
 #                    -4.78 - -3.92
 
+save(FinalFit, Inclusion, file = "~/Desktop/Wyoming/SparseInteractions/ModelFits/FH_NoEnv_FinalFit.rdata")
