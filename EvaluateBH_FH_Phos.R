@@ -1,3 +1,8 @@
+# I think it would be worth it to try the fit on Teton again with starting
+#    values and/or informative priors for the alpha_sp_intercept parameters
+
+
+
 # Use this script to evaluate the current fit of the model from the server
 library(rstan)
 
@@ -7,10 +12,12 @@ load("ModelFits/Current_BH_FH_Phos_fit.rdata")
 PrelimFit
 PrelimPosteriors <- rstan::extract(PrelimFit)
 # Diagnostic plots
-pairs(PrelimFit, pars = c("log_lambda", "alpha_hat", "tau_tilde", "c2_tilde")) 
-traceplot(PrelimFit, pars = c("log_lambda", "alpha_hat", "tau_tilde", "c2_tilde"))
-traceplot(PrelimFit, pars = "alpha_sp_tilde")
-traceplot(PrelimFit, pars = "local_shrinkage")
+NonShrinkageParams <- c("lambdas[1]", "lambdas[2]", "alphas[1]", "alphas[2]", "alpha_sp_intercept[1]",
+                        "alpha_sp_intercept[2]", "alpha_sp_intercept[3]", "alpha_sp_intercept[4]")
+pairs(PrelimFit, pars = NonShrinkageParams) 
+traceplot(PrelimFit, pars = NonShrinkageParams[1:2])
+traceplot(PrelimFit, pars = NonShrinkageParams[3:4])
+traceplot(PrelimFit, pars = NonShrinkageParams[5:8])
 
 # autocorrelation of the MCMC samples
 acf(PrelimPosteriors$log_lambda)
