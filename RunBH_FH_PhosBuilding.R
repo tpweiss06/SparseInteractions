@@ -52,7 +52,7 @@ intercept_mean <- rep(NA, S_intercept)
 intercept_sd <- rep(NA, S_intercept)
 for(s in 1:S_intercept){
   intercept_mean[s] <- mean(Posteriors$alpha_sp[,s])
-  intercept_sd[s] <- sd(Posteriors$alpha_sp[,s])
+  intercept_sd[s] <- 5 * sd(Posteriors$alpha_sp[,s])
 }
 
 # Do a preliminary fit to compile the stan model and check for convergence, mixing,
@@ -61,17 +61,19 @@ for(s in 1:S_intercept){
 # tau0 <- 1 = 325 divergents
 # tau0 <- 0.5 = 170 divergents
 # tau0 <- 0.25 = 339 divergents
-tau0 <- 0.5
+#tau0 <- 0.5
+tau0 <- 1
 # slab_scale <- 2.5 = 170 divergents
 # slab_scale <- 1.5 = 175 divergents
 # slab_scale <- 0.5 = 127 divergents
 # slab_scale <- 0.25 = 108 divergents
 # slab_scale <- 0.1 = 99 divergents
 # slab_scale <- 0.05 = 216 divergents
-slab_scale <- 0.5
-slab_df <- 50 # follows the online implementation. this might need tuning
+#slab_scale <- 0.5
+slab_scale <- log(2)
+slab_df <- 25 # follows the online implementation. this might need tuning
 DataVec <- c("N", "S", "Fecundity", "SpMatrix", "tau0", "slab_scale", "slab_df", 
-             "phos", "InclusionIntercept", "S_intercept")
+             "phos", "InclusionIntercept", "S_intercept", "intercept_mean", "intercept_sd")
 nIter <- 3000
 nChains <- 3
 PrelimFit <- stan(file = "BH_FH_PhosBuilding.stan", data = DataVec, iter = nIter, chains = nChains,
