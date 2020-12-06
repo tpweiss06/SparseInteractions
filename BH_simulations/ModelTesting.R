@@ -6,16 +6,13 @@
 # NOTE: For these tests, I'm simply going to use species 1 as the focal species
 #       for simplicity. This will be run on Teton.
 
-# Set the number of nodes and the number of tasks per node
-# NOTE: this should match the .sh file
-nodes <- 1
-ntasks_per_node <- 32
-TotalTasks <- nodes*ntasks_per_node
+library(rstan)
+library(HDInterval)
+options(mc.cores = parallel::detectCores())
+rstan_options(auto_write = TRUE)
 
 # Set the working directory and load in necessary libraries
-setwd("/project/commbayes/SparseInteractions")
-library(parallel)
-library(Rmpi)
+setwd("/project/commbayes/SparseInteractions/BH_sims/")
 
 # Create some useful vectors to pass to the cluster
 ScenarioNames <- c("none", "dem", "env", "env_dem")
@@ -40,8 +37,6 @@ slab_scale <- log(2)
 slab_df <- 25
 PrelimDataVec <- c("N", "S", "Fecundity", "SpMatrix", "env", "tau0", "slab_scale", "slab_df")
 FinalDataVec <- c("N", "S", "Fecundity", "SpMatrix", "env", "Inclusion_ij", "Inclusion_eij")
-DataToExport <- c("N", "S", "tau0", "slab_scale", "slab_df", "PrelimDataVec", "FinalDataVec",
-                  "SimFiles", "ParamFiles", "Prefixes")
 
 ################################# Create a function to send to the cluster
 ModelFit <- function(i){	
@@ -160,27 +155,17 @@ ModelFit <- function(i){
      return(ModelDiagnostics)
 }
 
-# Initialize the cluster and pass in the necessary data to the nodes
-cl <- makeCluster(TotalTasks - 1, type = "MPI")
-temp <- clusterEvalQ(cl, setwd("/project/commbayes/SparseInteractions/BH_sims/"))
-temp <- clusterExport(cl, DataToExport)
-temp <- clusterEvalQ(cl, library(rstan))
-temp <- clusterEvalQ(cl, library(HDInterval))
-temp <- clusterEvalQ(cl, rstan_options(auto_write = TRUE))
-
-# Run the parallel calculations
-Diagnostics <- clusterApply(cl, x = 1:8, fun = ModelFit)
-
-# Create some objects to hold Rhats and Neff values
+# Run the model for each scenario
 PrelimRhats <- matrix(data = NA, nrow = 8, ncol = 93)
 PrelimNeffs <- matrix(data = NA, nrow = 8, ncol = 93)
 FinalRhats <- matrix(data = NA, nrow = 8, ncol = 49)
 FinalNeffs <- matrix(data = NA, nrow = 8, ncol = 49)
 for(i in 1:8){
-     PrelimRhats[i,] <- Diagnostics[[i]]$PrelimRhats
-     PrelimNeffs[i,] <- Diagnostics[[i]]$PrelimNeffs
-     FinalRhats[i,] <- Diagnostics[[i]]$FinalRhats
-     FinalNeffs[i,] <- Diagnostics[[i]]$FinalNeffs
+        Results <- ModelFit(i)
+        PrelimRhats[i,] <- Results$PrelimRhats
+        PrelimNeffs[i,] <- Results$PrelimNeffs
+        FinalRhats[i,] <- Results$FinalRhats
+        FinalNeffs[i,] <- Results$FinalNeffs
 }
 
 save(PrelimRhats, PrelimNeffs, FinalRhats, FinalNeffs, file = "ModelDiagnostics.rdata")
