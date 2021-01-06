@@ -3,7 +3,7 @@
 #SBATCH --account=commbayes
 #SBATCH --time=48:00:00
 #SBATCH --nodes=1
-#SBATCH --ntasks-per-node=32
+#SBATCH --ntasks-per-node=5
 #SBATCH --cpus-per-task=1
 #SBATCH --mail-type=ALL
 #SBATCH --mail-user=cweissle@uwyo.edu
@@ -17,6 +17,6 @@ LogFile=ModelTesting.log
 cd /project/commbayes/SparseInteractions/BH_sims
 
 # Load R and MPI
-module load gcc/7.3.0 r/3.5.3 swset/2018.05 r-rstan/2.18.2-py27 openmpi/3.1.0 r-rmpi/0.6-9-r353-py27
+module load gcc/7.3.0 r/3.5.3 swset/2018.05 r-rstan/2.18.2-py27 
 
 R < $Rscript > $LogFile --no-save 

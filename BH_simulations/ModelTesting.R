@@ -28,38 +28,44 @@ for(i in 1:4){
      Prefixes <- c(Prefixes, paste(i, "b_", ScenarioNames[i], sep = ""))
 }
 
-# Set some of the universal input data for the stan model and a vector to send
-#    the objects to the cluster
-N <- 50
-S <- 10
-tau0 <- 1
-slab_scale <- log(2)
-slab_df <- 25
-PrelimDataVec <- c("N", "S", "Fecundity", "SpMatrix", "env", "tau0", "slab_scale", "slab_df")
-FinalDataVec <- c("N", "S", "Fecundity", "SpMatrix", "env", "Inclusion_ij", "Inclusion_eij")
-
 ################################# Create a function to send to the cluster
-ModelFit <- function(i){	
-     SimData <- read.csv(SimFiles[i])
-
+ModelFit <- function(CurScen){	
+     # Set some of the universal input data for the stan model and a vector to send
+     #    the objects to the cluster
+     N <- 50
+     S <- 10
+     tau0 <- 1
+     slab_scale <- log(2)
+     slab_df <- 25
+     PrelimDataVec <- c("N", "S", "Nt", "Ntp1", "SpMatrix", "env", "tau0", "slab_scale", "slab_df")
+     FinalDataVec <- c("N", "S", "Nt", "Ntp1", "SpMatrix", "env", "Inclusion_ij", "Inclusion_eij")
+     
+     SimData <- read.csv(SimFiles[CurScen])
+     
+     # First get rid of any data with species 1 starting at 0 abundance
+     Gen0Data <- subset(SimData, species == 1 & time == 0)
+     Gen1Data <- subset(SimData, species == 1 & time == 1)
+     
      # Extract the necessary data for the model
-     env <- subset(SimData, species == 1 & time == 0)$run.env
-     Fecundity <- round(subset(SimData, species == 1 & time == 1)$pop / subset(SimData, species == 1 & time == 0)$pop)
+     env <- Gen0Data$run.env
+     Nt <- round(Gen0Data$pop)
+     Ntp1 <- round(Gen1Data$pop)
+     
      # Need to divide by initial population to get per capita fecundity to match
      SpMatrix <- matrix(data = NA, nrow = N, ncol = S)
      for(s in 1:S){
-             SpMatrix[,s] <- round(subset(SimData, species == s & time == 0)$pop)
+          SpMatrix[,s] <- round(subset(SimData, species == s & time == 0)$pop)
      }
 
      # Now run the perliminary fit of the model to assess parameter shrinkage
-     PrelimFit <- stan(file = "BH_FH_Preliminary_Sims.stan", data = PrelimDataVec, iter = 6000, 
-                       chains = 4, control = list(adapt_delta = 0.99, max_treedepth = 15),
+     PrelimFit <- stan(file = "BH_FH_Preliminary_Sims.stan", data = PrelimDataVec, iter = 6000,
+                       chains = 4, control = list(adapt_delta = 0.99, max_treedepth = 20),
                        warmup = 5000)
      PrelimPosteriors <- extract(PrelimFit)
 
-     # Save some diagnostic values
-     PrelimRhats <- summary(PrelimFit)$summary[,"Rhat"]   
-     PrelimNeffs <- summary(PrelimFit)$summary[,"n_eff"] 
+     # # Save some diagnostic values
+     PrelimRhats <- summary(PrelimFit)$summary[,"Rhat"]
+     PrelimNeffs <- summary(PrelimFit)$summary[,"n_eff"]
 
      # Determine which parameters warrant inclusion in the final model
      Inclusion_ij <- rep(0, S)
@@ -77,8 +83,8 @@ ModelFit <- function(i){
      }
 
      # Run the final fit of the model
-     FinalFit <- stan(file = "BH_Final_Sims.stan", data = FinalDataVec, iter = 6000, 
-                      chains = 4, control = list(adapt_delta = 0.99, max_treedepth = 15),
+     FinalFit <- stan(file = "BH_Final_Sims.stan", data = FinalDataVec, iter = 6000,
+                      chains = 4, control = list(adapt_delta = 0.99, max_treedepth = 20),
                       warmup = 5000)
      FinalPosteriors <- extract(PrelimFit)
 
@@ -124,12 +130,12 @@ ModelFit <- function(i){
      }
 
      # Load in the relevant parameters to compare on the graph
-     TrueVals <- read.csv(ParamFiles[i])
+     TrueVals <- read.csv(ParamFiles[CurScen])
 
      # Plot parameter estimate distributions with vertical lines at true values
      # A 2 x 6 figure with the first plot being lambda across the environment and the
      #    next 10 plots being the alphas across the environment
-     FigName <- paste("Results_", Prefixes[i], ".pdf", sep = "")
+     FigName <- paste("Results_", Prefixes[CurScen], ".pdf", sep = "")
      pdf(file = FigName, width = 10, height = 7, onefile = FALSE, paper = "special")
           par(mfrow = c(2,6))
           # First plot lambda
@@ -151,21 +157,22 @@ ModelFit <- function(i){
      dev.off()
 
      # Return the Rhats and things
-     ModelDiagnostics <- list(PrelimRhats, PrelimNeffs, FinalRhats, FinalNeffs)
+     ModelDiagnostics <- list(PrelimRhats = PrelimRhats, PrelimNeffs = PrelimNeffs, 
+                              FinalRhats = FinalRhats, FinalNeffs = FinalNeffs)
      return(ModelDiagnostics)
 }
 
 # Run the model for each scenario
-PrelimRhats <- matrix(data = NA, nrow = 8, ncol = 93)
-PrelimNeffs <- matrix(data = NA, nrow = 8, ncol = 93)
-FinalRhats <- matrix(data = NA, nrow = 8, ncol = 49)
-FinalNeffs <- matrix(data = NA, nrow = 8, ncol = 49)
-for(i in 1:8){
+PrelimRhats <- vector(mode = "list", length = 8)
+PrelimNeffs <- vector(mode = "list", length = 8)
+FinalRhats <- vector(mode = "list", length = 8)
+FinalNeffs <- vector(mode = "list", length = 8)
+for(i in 1:4){
         Results <- ModelFit(i)
-        PrelimRhats[i,] <- Results$PrelimRhats
-        PrelimNeffs[i,] <- Results$PrelimNeffs
-        FinalRhats[i,] <- Results$FinalRhats
-        FinalNeffs[i,] <- Results$FinalNeffs
+        PrelimRhats[[i]] <- Results$PrelimRhats
+        PrelimNeffs[[i]] <- Results$PrelimNeffs
+        FinalRhats[[i]] <- Results$FinalRhats
+        FinalNeffs[[i]] <- Results$FinalNeffs
 }
 
 save(PrelimRhats, PrelimNeffs, FinalRhats, FinalNeffs, file = "ModelDiagnostics.rdata")
