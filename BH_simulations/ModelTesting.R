@@ -6,6 +6,10 @@
 # NOTE: For these tests, I'm simply going to use species 1 as the focal species
 #       for simplicity. This will be run on Teton.
 
+
+I need to compare this to the version on Teton once Teton is up and running again
+
+
 library(rstan)
 library(HDInterval)
 options(mc.cores = parallel::detectCores())
@@ -15,11 +19,11 @@ rstan_options(auto_write = TRUE)
 setwd("/project/commbayes/SparseInteractions/BH_sims/")
 
 # Create some useful vectors to pass to the cluster
-ScenarioNames <- c("none", "dem", "env", "env_dem")
+ScenarioNames <- c("none", "dem", "env", "env_dem", "env2")
 SimFiles <- NULL
 ParamFiles <- NULL
 Prefixes <- NULL
-for(i in 1:4){
+for(i in 1:5){
      SimFiles <- c(SimFiles, paste("simulation_", i, "a_", ScenarioNames[i], ".csv", sep = ""))
      SimFiles <- c(SimFiles, paste("simulation_", i, "b_", ScenarioNames[i], ".csv", sep = ""))
      ParamFiles <- c(ParamFiles, paste("parameters_", i, "a_", ScenarioNames[i], ".csv", sep = ""))
@@ -27,6 +31,9 @@ for(i in 1:4){
      Prefixes <- c(Prefixes, paste(i, "a_", ScenarioNames[i], sep = ""))
      Prefixes <- c(Prefixes, paste(i, "b_", ScenarioNames[i], sep = ""))
 }
+SimFiles <- c(SimFiles, "simulation_5c_env2.csv")
+ParamFiles <- c(ParamFiles, "parameters_5c_env2.csv")
+Prefixes <- c(Prefixes, "5c_env2")
 
 ################################# Create a function to send to the cluster
 ModelFit <- function(CurScen){	
@@ -99,7 +106,7 @@ ModelFit <- function(CurScen){
      Lambda <- matrix(data = NA, nrow = PostLength, ncol = EnvLength)
      Alphas <- array(data = NA, dim = c(S, PostLength, EnvLength))
      for(i in 1:PostLength){
-          Lambda[i,] <- exp(FinalPosteriors$lambdas[i,1] + FinalPosteriors$lambdas[i,2]*EnvVals)
+          lambda[i,] <- FinalPosteriors$lambdas[i,1] * exp(-1*((FinalPosteriors$lambdas[i,2] - EnvVals)/(2*FinalPosteriors$lambdas[i,3]))^2)
           for(s in 1:S){
                if(Inclusion_ij[s] == 1){
                     if(Inclusion_eij[s] == 1){
@@ -136,26 +143,49 @@ ModelFit <- function(CurScen){
      # A 2 x 6 figure with the first plot being lambda across the environment and the
      #    next 10 plots being the alphas across the environment
      FigName <- paste("Results_", Prefixes[CurScen], ".pdf", sep = "")
-     pdf(file = FigName, width = 10, height = 7, onefile = FALSE, paper = "special")
-          par(mfrow = c(2,6))
-          # First plot lambda
-          plot(NA, NA, main = "", xlab = "", ylab = "Lambda", xlim = range(EnvVals), ylim = c(0, 5))
-          abline(a = TrueVals$lambda.mean[1], b = TrueVals$lambda.env[1], lwd = 2)
-          lines(x = EnvVals, y = LambdaEsts[1,], col = "darkred")
-          lines(x = EnvVals, y = LambdaEsts[2,], col = "darkred", lty = 2)
-          lines(x = EnvVals, y = LambdaEsts[3,], col = "darkred", lty = 2)
-          # Now the alpha values
-          for(s in 1:S){
-               yLabel <- paste("alpha", s, sep = " ")
-               plot(NA, NA, main = "", xlab = "", ylab = yLabel, xlim = range(EnvVals), ylim = c(0, 0.02))
-               abline(h = TrueVals[1,4+s], lwd = 2)
-               lines(x = EnvVals, y = AlphaEsts[s,1,], col = "darkred")
-               lines(x = EnvVals, y = AlphaEsts[s,2,], col = "darkred", lty = 2)
-               lines(x = EnvVals, y = AlphaEsts[s,3,], col = "darkred", lty = 2)
-          }
-          mtext("Environmental value", side = 1, outer = TRUE)
-     dev.off()
-
+     if(CurScen <= 8){
+        pdf(file = FigName, width = 10, height = 7, onefile = FALSE, paper = "special")
+                  par(mfrow = c(2,6))
+                  # First plot lambda
+                  plot(NA, NA, main = "", xlab = "", ylab = "Lambda", xlim = range(EnvVals), ylim = c(0, 5))
+                  abline(a = TrueVals$lambda.mean[1], b = TrueVals$lambda.env[1], lwd = 2)
+                  lines(x = EnvVals, y = LambdaEsts[1,], col = "darkred")
+                  lines(x = EnvVals, y = LambdaEsts[2,], col = "darkred", lty = 2)
+                  lines(x = EnvVals, y = LambdaEsts[3,], col = "darkred", lty = 2)
+                  # Now the alpha values
+                  for(s in 1:S){
+                       yLabel <- paste("alpha", s, sep = " ")
+                       plot(NA, NA, main = "", xlab = "", ylab = yLabel, xlim = range(EnvVals), ylim = c(0, 0.02))
+                       abline(h = TrueVals[1,4+s], lwd = 2)
+                       lines(x = EnvVals, y = AlphaEsts[s,1,], col = "darkred")
+                       lines(x = EnvVals, y = AlphaEsts[s,2,], col = "darkred", lty = 2)
+                       lines(x = EnvVals, y = AlphaEsts[s,3,], col = "darkred", lty = 2)
+                  }
+                  mtext("Environmental value", side = 1, outer = TRUE)
+        dev.off()
+     }else{
+             pdf(file = FigName, width = 10, height = 7, onefile = FALSE, paper = "special")
+                     par(mfrow = c(2,6))
+                     # First plot lambda
+                     plot(NA, NA, main = "", xlab = "", ylab = "Lambda", xlim = range(EnvVals), ylim = c(0, 5))
+                     TrueLambda <- TrueVals$lambda.max[1] * exp(-1*((TrueVals$z.env[1] - EnvVals)/(2*TrueVals$sigma.env[1]))^2)
+                     lines(x = EnvVals, y = TrueLambda, lwd = 2)
+                     lines(x = EnvVals, y = LambdaEsts[1,], col = "darkred")
+                     lines(x = EnvVals, y = LambdaEsts[2,], col = "darkred", lty = 2)
+                     lines(x = EnvVals, y = LambdaEsts[3,], col = "darkred", lty = 2)
+                     # Now the alpha values
+                for(s in 1:S){
+                             yLabel <- paste("alpha", s, sep = " ")
+                             plot(NA, NA, main = "", xlab = "", ylab = yLabel, xlim = range(EnvVals), ylim = c(0, 0.02))
+                             abline(h = TrueVals[1,4+s], lwd = 2)
+                             lines(x = EnvVals, y = AlphaEsts[s,1,], col = "darkred")
+                             lines(x = EnvVals, y = AlphaEsts[s,2,], col = "darkred", lty = 2)
+                             lines(x = EnvVals, y = AlphaEsts[s,3,], col = "darkred", lty = 2)
+                }
+                mtext("Environmental value", side = 1, outer = TRUE)
+             dev.off()
+             
+     }
      # Return the Rhats and things
      ModelDiagnostics <- list(PrelimRhats = PrelimRhats, PrelimNeffs = PrelimNeffs, 
                               FinalRhats = FinalRhats, FinalNeffs = FinalNeffs)
