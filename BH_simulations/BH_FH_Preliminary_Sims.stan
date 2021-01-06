@@ -19,7 +19,7 @@ transformed data{
 }
 
 parameters{
-  vector[2] lambdas_tilde;
+  vector[3] lambdas_tilde;   // 1: lambda_max, 2: z (env. opt.), 3: sigma (niche breadth)
   vector[2] alphas_tilde;
   vector[S] alpha_hat_ij_tilde;
   vector[S] alpha_hat_eij_tilde;
@@ -38,7 +38,7 @@ transformed parameters{
   vector[S] local_shrinkage_ij_tilde;
   vector[S] alpha_hat_eij;
   vector[S] local_shrinkage_eij_tilde;
-  vector[2] lambdas;
+  vector[3] lambdas;
   vector[2] alphas;
 
   tau = tau0*tau_tilde; 	// tau ~ cauchy(0, tau0)
@@ -58,6 +58,7 @@ transformed parameters{
     alphas[i] = 10 * alphas_tilde[i];
     lambdas[i] = 10 * lambdas_tilde[i];
   }
+  lambdas[3] = 10 * lambdas_tilde[3];
 }
 
 model{
@@ -86,7 +87,7 @@ model{
 
   // implement the biological model
   for(i in 1:N){
-    lambda_ei[i] = exp(lambdas[1] + lambdas[2] * env[i]);
+    lambda_ei[i] = lambdas[1] * exp(-1*((lambdas[2] - env[i])/(2*lambdas[3]))^2);
     for(s in 1:S){
         alpha_eij[i,s] = exp(alphas[1] + alpha_hat_ij[s] + (alphas[2] + alpha_hat_eij[s]) * env[i]);
     }
