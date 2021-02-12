@@ -1,6 +1,3 @@
-// This script fits a Beverton-Holt generalized competition model using a Finnish (regularized) horseshoe prior (Piironen and Vehtari 2017) 
-// 	following the stan implementation demonstrated on https://betanalpha.github.io/assets/case_studies/bayes_sparse_regression.html
-
 data{
   int<lower = 1> N;
   int<lower = 1> S;
@@ -11,6 +8,12 @@ data{
 
   int Inclusion_ij[S];
   int Inclusion_eij[S];
+  
+  // Include the data for the posterior predictive check
+  int<lower = 1> N_ppc;
+  int<lower = 0> Nt_ppc[N_ppc];
+  matrix[N_ppc,S] SpMatrix_ppc;
+  vector[N_ppc] env_ppc;
 }
 
 parameters{
@@ -77,5 +80,35 @@ model{
     if(Ntp1_hat[i] > 0){
       Ntp1[i] ~ poisson(Ntp1_hat[i]);
     }
+  }
+}
+
+generated quantities{
+  vector[N_ppc] interaction_effects;
+  matrix[N_ppc,S] alpha_eij;
+  vector[N_ppc] lambda_ei;
+  int<lower = 0> Ntp1_ppc[N_ppc];
+     
+  // implement the biological model
+  for(i in 1:N_ppc){
+    lambda_ei[i] = lambdas[1] * exp(-1*((lambdas[2] - env[i])/(2*lambdas[3]))^2);
+    for(s in 1:S){
+      if(Inclusion_ij[s] == 1){
+        if(Inclusion_eij[s] == 1){
+          alpha_eij[i,s] = exp(alphas[1] + alpha_hat_ij[s] + (alphas[2] + alpha_hat_eij[s]) * env_ppc[i]);
+        }else{
+          alpha_eij[i,s] = exp(alphas[1] + alpha_hat_ij[s] + alphas[2] * env_ppc[i]);
+        }
+      }else{
+        if(Inclusion_eij[s] == 1){
+          alpha_eij[i,s] = exp(alphas[1] + (alphas[2] + alpha_hat_eij[s]) * env_ppc[i]);
+        }else{
+          alpha_eij[i,s] = exp(alphas[1] + alphas[2] * env_ppc[i]);
+        }
+      }
+    }
+    interaction_effects[i] = sum(alpha_eij[i,] .* SpMatrix_ppc[i,]);
+    
+    Ntp1_ppc[i] = poisson_rng(Nt_ppc[i] * lambda_ei[i] / (1 + interaction_effects[i]));
   }
 }

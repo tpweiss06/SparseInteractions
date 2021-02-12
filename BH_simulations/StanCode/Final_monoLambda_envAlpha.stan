@@ -1,6 +1,3 @@
-// This script fits a Beverton-Holt generalized competition model using a Finnish (regularized) horseshoe prior (Piironen and Vehtari 2017) 
-// 	following the stan implementation demonstrated on https://betanalpha.github.io/assets/case_studies/bayes_sparse_regression.html
-
 data{
   int<lower = 1> N;
   int<lower = 1> S;
@@ -20,7 +17,7 @@ data{
 }
 
 parameters{
-  vector[3] lambdas_tilde;   // 1: lambda_max, 2: z (env. opt.), 3: sigma (niche breadth)
+  vector[2] lambdas_tilde;    // 1: intercept, 2: slope
   vector[2] alphas_tilde;
   vector[S] alpha_hat_ij_tilde;
   vector[S] alpha_hat_eij_tilde;
@@ -29,7 +26,7 @@ parameters{
 transformed parameters{
   vector[S] alpha_hat_ij;
   vector[S] alpha_hat_eij;
-  vector[3] lambdas;
+  vector[2] lambdas;
   vector[2] alphas;
 
   // scale the lambdas and alphas values
@@ -37,7 +34,6 @@ transformed parameters{
     alphas[i] = 10 * alphas_tilde[i];
     lambdas[i] = 10 * lambdas_tilde[i];
   }
-  lambdas[3] = 10 * lambdas_tilde[3];
   for(s in 1:S){
     alpha_hat_ij[s] = 10 * alpha_hat_ij_tilde[s];
     alpha_hat_eij[s] = 10 * alpha_hat_eij_tilde[s];
@@ -62,7 +58,7 @@ model{
 
   // implement the biological model
   for(i in 1:N){
-    lambda_ei[i] = lambdas[1] * exp(-1*((lambdas[2] - env[i])/(2*lambdas[3]))^2);
+    lambda_ei[i] = exp(lambdas[1] + lambdas[2]*env[i]);
     for(s in 1:S){
       if(Inclusion_ij[s] == 1){
         if(Inclusion_eij[s] == 1){
@@ -94,7 +90,7 @@ generated quantities{
      
   // implement the biological model
   for(i in 1:N_ppc){
-    lambda_ei[i] = lambdas[1] * exp(-1*((lambdas[2] - env[i])/(2*lambdas[3]))^2);
+    lambda_ei[i] = exp(lambdas[1] + lambdas[2]*env[i]);
     for(s in 1:S){
       if(Inclusion_ij[s] == 1){
         if(Inclusion_eij[s] == 1){
