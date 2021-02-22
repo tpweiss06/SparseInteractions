@@ -65,25 +65,3 @@ model{
     }
   }
 }
-
-generated quantities{
-  vector[N_ppc] interaction_effects;
-  row_vector[S] alpha_ij;
-  vector[N_ppc] lambda_ei;
-  int<lower = 0> Ntp1_ppc[N_ppc];
-     
-  // implement the biological model
-  for(s in 1:S){
-      if(Inclusion_ij[s] == 1){
-        alpha_ij[s] = exp(alpha_generic + alpha_hat_ij[s]);
-      }else{
-        alpha_ij[s] = exp(alpha_generic);
-      }
-  }
-  for(i in 1:N_ppc){
-    lambda_ei[i] = exp(lambdas[1] + lambdas[2]*env[i]);
-    interaction_effects[i] = sum(alpha_ij .* SpMatrix_ppc[i,]);
-    
-    Ntp1_ppc[i] = poisson_rng(Nt_ppc[i] * lambda_ei[i] / (1 + interaction_effects[i]));
-  }
-}

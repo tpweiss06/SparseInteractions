@@ -6,10 +6,6 @@
 # NOTE: For these tests, I'm simply going to use species 1 as the focal species
 #       for simplicity. This will be run on Teton.
 
-
-I need to compare this to the version on Teton once Teton is up and running again
-
-
 library(rstan)
 library(HDInterval)
 options(mc.cores = parallel::detectCores())
@@ -39,7 +35,7 @@ Prefixes <- c(Prefixes, "5c_env2")
 ModelFit <- function(CurScen){	
      # Set some of the universal input data for the stan model and a vector to send
      #    the objects to the cluster
-     N <- 50
+     #N <- 50
      S <- 10
      tau0 <- 1
      slab_scale <- log(2)
@@ -52,6 +48,7 @@ ModelFit <- function(CurScen){
      # First get rid of any data with species 1 starting at 0 abundance
      Gen0Data <- subset(SimData, species == 1 & time == 0)
      Gen1Data <- subset(SimData, species == 1 & time == 1)
+     N <- nrow(Gen0Data)
      
      # Extract the necessary data for the model
      env <- Gen0Data$run.env
@@ -106,7 +103,7 @@ ModelFit <- function(CurScen){
      Lambda <- matrix(data = NA, nrow = PostLength, ncol = EnvLength)
      Alphas <- array(data = NA, dim = c(S, PostLength, EnvLength))
      for(i in 1:PostLength){
-          lambda[i,] <- FinalPosteriors$lambdas[i,1] * exp(-1*((FinalPosteriors$lambdas[i,2] - EnvVals)/(2*FinalPosteriors$lambdas[i,3]))^2)
+          Lambda[i,] <- FinalPosteriors$lambdas[i,1] * exp(-1*((FinalPosteriors$lambdas[i,2] - EnvVals)/(2*FinalPosteriors$lambdas[i,3]))^2)
           for(s in 1:S){
                if(Inclusion_ij[s] == 1){
                     if(Inclusion_eij[s] == 1){
@@ -184,25 +181,19 @@ ModelFit <- function(CurScen){
                 }
                 mtext("Environmental value", side = 1, outer = TRUE)
              dev.off()
-             
+
      }
      # Return the Rhats and things
-     ModelDiagnostics <- list(PrelimRhats = PrelimRhats, PrelimNeffs = PrelimNeffs, 
+     ModelDiagnostics <- list(PrelimRhats = PrelimRhats, PrelimNeffs = PrelimNeffs,
                               FinalRhats = FinalRhats, FinalNeffs = FinalNeffs)
      return(ModelDiagnostics)
 }
 
 # Run the model for each scenario
-PrelimRhats <- vector(mode = "list", length = 8)
-PrelimNeffs <- vector(mode = "list", length = 8)
-FinalRhats <- vector(mode = "list", length = 8)
-FinalNeffs <- vector(mode = "list", length = 8)
-for(i in 1:4){
-        Results <- ModelFit(i)
-        PrelimRhats[[i]] <- Results$PrelimRhats
-        PrelimNeffs[[i]] <- Results$PrelimNeffs
-        FinalRhats[[i]] <- Results$FinalRhats
-        FinalNeffs[[i]] <- Results$FinalNeffs
+ModDiags <- vector(mode = "list", length = 11)
+names(ModDiags) <- Prefixes
+for(i in 1:11){
+        ModDiags[[i]] <- ModelFit(i)
 }
 
-save(PrelimRhats, PrelimNeffs, FinalRhats, FinalNeffs, file = "ModelDiagnostics.rdata")
+save(Prefixes, ModDiags, file = "ModelDiagnostics.rdata")

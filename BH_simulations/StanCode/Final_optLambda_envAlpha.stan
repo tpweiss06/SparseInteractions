@@ -82,33 +82,3 @@ model{
     }
   }
 }
-
-generated quantities{
-  vector[N_ppc] interaction_effects;
-  matrix[N_ppc,S] alpha_eij;
-  vector[N_ppc] lambda_ei;
-  int<lower = 0> Ntp1_ppc[N_ppc];
-     
-  // implement the biological model
-  for(i in 1:N_ppc){
-    lambda_ei[i] = lambdas[1] * exp(-1*((lambdas[2] - env[i])/(2*lambdas[3]))^2);
-    for(s in 1:S){
-      if(Inclusion_ij[s] == 1){
-        if(Inclusion_eij[s] == 1){
-          alpha_eij[i,s] = exp(alphas[1] + alpha_hat_ij[s] + (alphas[2] + alpha_hat_eij[s]) * env_ppc[i]);
-        }else{
-          alpha_eij[i,s] = exp(alphas[1] + alpha_hat_ij[s] + alphas[2] * env_ppc[i]);
-        }
-      }else{
-        if(Inclusion_eij[s] == 1){
-          alpha_eij[i,s] = exp(alphas[1] + (alphas[2] + alpha_hat_eij[s]) * env_ppc[i]);
-        }else{
-          alpha_eij[i,s] = exp(alphas[1] + alphas[2] * env_ppc[i]);
-        }
-      }
-    }
-    interaction_effects[i] = sum(alpha_eij[i,] .* SpMatrix_ppc[i,]);
-    
-    Ntp1_ppc[i] = poisson_rng(Nt_ppc[i] * lambda_ei[i] / (1 + interaction_effects[i]));
-  }
-}
