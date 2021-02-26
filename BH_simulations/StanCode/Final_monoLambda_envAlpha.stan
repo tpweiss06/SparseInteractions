@@ -17,27 +17,18 @@ data{
 }
 
 parameters{
-  vector[2] lambdas_tilde;    // 1: intercept, 2: slope
+  vector[2] lambdas;    // 1: intercept, 2: slope
   vector[2] alphas_tilde;
-  vector[S] alpha_hat_ij_tilde;
-  vector[S] alpha_hat_eij_tilde;
+  vector[S] alpha_hat_ij;
+  vector[S] alpha_hat_eij;
 }
 
 transformed parameters{
-  vector[S] alpha_hat_ij;
-  vector[S] alpha_hat_eij;
-  vector[2] lambdas;
   vector[2] alphas;
 
   // scale the lambdas and alphas values
-  for(i in 1:2){
-    alphas[i] = 10 * alphas_tilde[i];
-    lambdas[i] = 10 * lambdas_tilde[i];
-  }
-  for(s in 1:S){
-    alpha_hat_ij[s] = 10 * alpha_hat_ij_tilde[s];
-    alpha_hat_eij[s] = 10 * alpha_hat_eij_tilde[s];
-  }
+  alphas[1] = 1.75 * alphas_tilde[1] - 7;
+  alphas[2] = alphas_tilde[2] * 0.5;
 }
 
 model{
@@ -51,10 +42,9 @@ model{
 
   // set regular priors
   alphas_tilde ~ normal(0,1);
-  lambdas_tilde ~ normal(0,1);
-  alpha_hat_ij_tilde ~ normal(0,1);
-  alpha_hat_eij_tilde ~ normal(0,1);
-  
+  lambdas ~ normal(0,1);
+  alpha_hat_ij ~ normal(0,1);
+  alpha_hat_eij ~ normal(0,1);
 
   // implement the biological model
   for(i in 1:N){

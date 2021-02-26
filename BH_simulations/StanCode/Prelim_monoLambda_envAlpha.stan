@@ -25,7 +25,7 @@ transformed data{
 }
 
 parameters{
-  vector[2] lambdas_tilde;   // 1: intercept, 2: slope
+  vector[2] lambdas;   // 1: intercept, 2: slope
   vector[2] alphas_tilde;
   vector[S] alpha_hat_ij_tilde;
   vector[S] alpha_hat_eij_tilde;
@@ -44,7 +44,6 @@ transformed parameters{
   vector[S] local_shrinkage_ij_tilde;
   vector[S] alpha_hat_eij;
   vector[S] local_shrinkage_eij_tilde;
-  vector[2] lambdas;
   vector[2] alphas;
 
   tau = tau0*tau_tilde; 	// tau ~ cauchy(0, tau0)
@@ -60,10 +59,8 @@ transformed parameters{
   }
 
   // scale the lambdas and alphas values
-  for(i in 1:2){
-    alphas[i] = 10 * alphas_tilde[i];
-    lambdas[i] = 10 * lambdas_tilde[i];
-  }
+  alphas[1] = 1.75 * alphas_tilde[1] - 7;
+  alphas[2] = alphas_tilde[2] * 0.5;
 }
 
 model{
@@ -77,7 +74,7 @@ model{
 
   // set regular priors
   alphas_tilde ~ normal(0,1);
-  lambdas_tilde ~ normal(0, 1);
+  lambdas ~ normal(0, 1);
 
   // set the hierarchical priors for the Finnish horseshoe (regularized horseshoe) (Piironen and Vehtari 2017)
   // Following the stan implementation from https://betanalpha.github.io/assets/case_studies/bayes_sparse_regression.html
