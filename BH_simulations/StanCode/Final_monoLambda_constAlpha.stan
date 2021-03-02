@@ -6,31 +6,25 @@ data{
   matrix[N,S] SpMatrix;
   vector[N] env;
   int Inclusion_ij[S];
-  // Include the data for the posterior predictive check
-  int<lower = 1> N_ppc;
-  int<lower = 0> Nt_ppc[N_ppc];
-  matrix[N_ppc,S] SpMatrix_ppc;
-  vector[N_ppc] env_ppc;
 }
 
 parameters{
-  vector[2] lambdas_tilde;   // 1: intercept, 2: slope
+  vector[2] lambdas;   // 1: intercept, 2: slope
   real alpha_generic_tilde;
+  real alpha_intra_tilde;
   vector[S] alpha_hat_ij_tilde;
 }
 
 transformed parameters{
   vector[S] alpha_hat_ij;
-  vector[2] lambdas;
   real alpha_generic;
+  real alpha_intra;
 
   // scale the lambdas and alpha values
-  alpha_generic = 10 * alpha_generic_tilde;
-  for(i in 1:2){
-    lambdas[i] = 10 * lambdas_tilde[i];
-  }
+  alpha_generic = 0.75 * alpha_generic_tilde - 2;
+  alpha_intra = 0.75 * alpha_intra_tilde - 2;
   for(s in 1:S){
-    alpha_hat_ij[s] = 10 * alpha_hat_ij_tilde[s];
+    alpha_hat_ij[s] = 0.75 * alpha_hat_ij_tilde[s] - 2;
   }
 }
 
@@ -45,7 +39,8 @@ model{
 
   // set regular priors
   alpha_generic_tilde ~ normal(0,1);
-  lambdas_tilde ~ normal(0,1);
+  alpha_intra_tilde ~ normal(0,1);
+  lambdas ~ normal(0,1);
   alpha_hat_ij_tilde ~ normal(0,1);
   
   // implement the biological model
@@ -58,7 +53,7 @@ model{
   }
   for(i in 1:N){
     lambda_ei[i] = exp(lambdas[1] + lambdas[2]*env[i]);
-    interaction_effects[i] = sum(alpha_ij .* SpMatrix[i,]);
+    interaction_effects[i] = sum(alpha_ij .* SpMatrix[i,]) + exp(alpha_intra) * Nt[i];
     Ntp1_hat[i] = Nt[i] * lambda_ei[i] / (1 + interaction_effects[i]);
     if(Ntp1_hat[i] > 0){
       Ntp1[i] ~ poisson(Ntp1_hat[i]);

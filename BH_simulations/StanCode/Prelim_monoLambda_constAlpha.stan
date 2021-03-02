@@ -11,12 +11,6 @@ data{
   real tau0; 		// determines the scale of the global shrinkage parameter (tau)
   real slab_scale;	// scale for significant alpha_sp values
   real slab_df;		// effective degrees of freedom for significant alpha_sp values
-  
-  // Include the data for the posterior predictive check
-  int<lower = 1> N_ppc;
-  int<lower = 0> Nt_ppc[N_ppc];
-  matrix[N_ppc,S] SpMatrix_ppc;
-  vector[N_ppc] env_ppc;
 }
 
 transformed data{
@@ -25,8 +19,9 @@ transformed data{
 }
 
 parameters{
-  vector[2] lambdas_tilde;   // 1: intercept, 2: slope
+  vector[2] lambdas;   // 1: intercept, 2: slope
   real alpha_generic_tilde;
+  real alpha_intra_tilde;
   vector[S] alpha_hat_ij_tilde;
   vector<lower = 0>[S] local_shrinkage_ij;
   real<lower = 0> c2_tilde;
@@ -40,8 +35,8 @@ transformed parameters{
   real tau;
   vector[S] alpha_hat_ij;
   vector[S] local_shrinkage_ij_tilde;
-  vector[2] lambdas;
   real alpha_generic;
+  real alpha_intra;
 
   tau = tau0*tau_tilde; 	// tau ~ cauchy(0, tau0)
   c2 = slab_scale2*c2_tilde;	// c2 ~ inv_gamma(half_slab_df, half_slab_df*slab_scale2)
@@ -52,11 +47,9 @@ transformed parameters{
     alpha_hat_ij[s] = tau * local_shrinkage_ij_tilde[s] * alpha_hat_ij_tilde[s];
   }
 
-  // scale the lambdas and alpha values
-  alpha_generic = 10 * alpha_generic_tilde;
-  for(i in 1:2){
-    lambdas[i] = 10 * lambdas_tilde[i];
-  }
+  // scale the alphas (generic and intra)
+  alpha_generic = 0.75 * alpha_generic_tilde - 2;
+  alpha_intra = 0.75 * alpha_intra_tilde - 2;
 }
 
 model{
@@ -70,7 +63,8 @@ model{
 
   // set regular priors
   alpha_generic_tilde ~ normal(0,1);
-  lambdas_tilde ~ normal(0, 1);
+  alpha_intra_tilde ~ normal(0,1);
+  lambdas ~ normal(0, 1);
 
   // set the hierarchical priors for the Finnish horseshoe (regularized horseshoe) (Piironen and Vehtari 2017)
   // Following the stan implementation from https://betanalpha.github.io/assets/case_studies/bayes_sparse_regression.html
@@ -86,7 +80,7 @@ model{
   }
   for(i in 1:N){
     lambda_ei[i] = exp(lambdas[1] + lambdas[2]*env[i]);
-    interaction_effects[i] = sum(alpha_ij .* SpMatrix[i,]);
+    interaction_effects[i] = sum(alpha_ij .* SpMatrix[i,]) + exp(alpha_intra) * Nt[i];
     
     Ntp1_hat[i] = Nt[i] * lambda_ei[i] / (1 + interaction_effects[i]);
     if(Ntp1_hat[i] > 0){

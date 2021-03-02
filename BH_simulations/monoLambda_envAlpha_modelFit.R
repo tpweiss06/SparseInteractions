@@ -31,15 +31,17 @@ options(mc.cores = parallel::detectCores())
 rstan_options(auto_write = TRUE)
 
 # assign some universal values to be used across model fits and graphs
-S <- 15
+S <- 14
+OtherSpecies <- setdiff(1:15, Focal)
 tau0 <- 1
 slab_scale <- log(2)
 slab_df <- 25
 
 # Set initial values to avoid initial problems with the random number generator
-ChainInitials <- list(lambdas_tilde = c(1,0), alphas_tilde = c(0,0), alpha_hat_ij_tilde = rep(0, S),
+ChainInitials <- list(lambdas_tilde = c(1,0), alpha_generic_tilde = c(0,0), alpha_hat_ij_tilde = rep(0, S),
                       local_shrinkage_ij = rep(5, S), c2_tilde = 1.25, tau_tilde = 15,
-                      alpha_hat_eij_tilde = rep(0, S), local_shrinkage_eij = rep(5, S))
+                      alpha_hat_eij_tilde = rep(0, S), local_shrinkage_eij = rep(5, S),
+                      alpha_intra_tilde = c(0,0))
 InitVals <- list(ChainInitials, ChainInitials, ChainInitials)
 
 # save the values for the posterior predictive checks
@@ -51,16 +53,14 @@ Nt_ppc <- ppc_data$pop[ppc_points]
 env_ppc <- ppc_data$run.env[ppc_points]
 SpMatrix_ppc <- matrix(data = NA, nrow = N_ppc, ncol = S)
 for(s in 1:S){
-     SpMatrix_ppc[,s] <- subset(FullSim, (species == s) & (run %in% ppc_runs) & (time == 0))$pop
+     SpMatrix_ppc[,s] <- subset(FullSim, (species == OtherSpecies[s]) & (run %in% ppc_runs) & (time == 0))$pop
 }
 Ntp1_ppc <- subset(FullSim, (species == Focal) & (run %in% ppc_runs) & (time == 1))$pop
 Growth_ppc <- log((Ntp1_ppc + 1)/Nt_ppc)
 
 # Create the data vectors to be passed to rstan for subsequent model fits
-PrelimDataVec <- c("N", "S", "Nt", "Ntp1", "SpMatrix", "env", "tau0", "slab_scale", "slab_df",
-                   "N_ppc", "Nt_ppc", "SpMatrix_ppc", "env_ppc")
-FinalDataVec <- c("N", "S", "Nt", "Ntp1", "SpMatrix", "env", "Inclusion_ij", "Inclusion_eij",
-                  "N_ppc", "Nt_ppc", "SpMatrix_ppc", "env_ppc")
+PrelimDataVec <- c("N", "S", "Nt", "Ntp1", "SpMatrix", "env", "tau0", "slab_scale", "slab_df")
+FinalDataVec <- c("N", "S", "Nt", "Ntp1", "SpMatrix", "env", "Inclusion_ij", "Inclusion_eij")
 
 # Set the local values to pass to rstan
 CurData <- subset(FullSim, (species == Focal) & (run <= N) & (time == 0))
@@ -68,7 +68,7 @@ Nt <- CurData$pop
 env <- CurData$run.env
 SpMatrix <- matrix(data = NA, nrow = N, ncol = S)
 for(s in 1:S){
-     SpMatrix[,s] <- subset(FullSim, (species == s) & (run <= N) & (time == 0))$pop
+     SpMatrix[,s] <- subset(FullSim, (species == OtherSpecies[s]) & (run <= N) & (time == 0))$pop
 }
 Ntp1 <- subset(FullSim, (species == Focal) & (run <= N) & (time == 1))$pop
 
@@ -82,14 +82,18 @@ save(PrelimFit, PrelimPosteriors, file = FitFileName)
 
 # Examine diagnostics and determine if parameters of model run should be updated
 quartz()
+pairs(PrelimFit, pars = c("lambdas", "alpha_generic", "alpha_intra"))
 hist(summary(PrelimFit)$summary[,"Rhat"])
 hist(summary(PrelimFit)$summary[,"n_eff"])
 traceplot(PrelimFit, pars = "lambdas")
-traceplot(PrelimFit, pars = "alphas")
+traceplot(PrelimFit, pars = c("alpha_generic", "alpha_intra"))
 traceplot(PrelimFit, pars = "alpha_hat_ij")
 traceplot(PrelimFit, pars = "alpha_hat_eij")
-acf(PrelimPosteriors$alphas[,1])
-acf(PrelimPosteriors$alphas[,2])
+par(mfrow = c(2,2))
+acf(PrelimPosteriors$alpha_generic[,1])
+acf(PrelimPosteriors$alpha_generic[,2])
+acf(PrelimPosteriors$alpha_intra[,1])
+acf(PrelimPosteriors$alpha_intra[,2])
 PlotSamples <- sample(1:S, size = 4, replace = FALSE)
 par(mfrow = c(2,2))
 for(i in 1:4){
@@ -100,16 +104,18 @@ for(i in 1:4){
 }
 
 ########### Posterior Predictive Check
-PostLength <- length(PrelimPosteriors$alphas[,1])
+PostLength <- length(PrelimPosteriors$alpha_generic[,1])
 # calculate the posterior distributions of the interaction coefficients and lambda
 Prelim_alpha_eij <- array(NA, dim = c(PostLength, N_ppc, S))
+Prelim_alpha_intra <- matrix(NA, nrow = PostLength, ncol = N_ppc)
 Prelim_lambda_ei <- matrix(NA, nrow = PostLength, ncol = N_ppc)
 for(i in 1:N_ppc){
         Prelim_lambda_ei[,i] <- exp(PrelimPosteriors$lambdas[,1] + PrelimPosteriors$lambdas[,2]*env_ppc[i])
         for(s in 1:S){
-                Prelim_alpha_eij[,i,s] <- exp(PrelimPosteriors$alphas[,1] + PrelimPosteriors$alpha_hat_ij[,s] +
-                                 (PrelimPosteriors$alphas[,2] + PrelimPosteriors$alpha_hat_eij[,s])*env_ppc[i])
+                Prelim_alpha_eij[,i,s] <- exp(PrelimPosteriors$alpha_generic[,1] + PrelimPosteriors$alpha_hat_ij[,s] +
+                                 (PrelimPosteriors$alpha_generic[,2] + PrelimPosteriors$alpha_hat_eij[,s])*env_ppc[i])
         }
+        Prelim_alpha_intra[,i] <- exp(PrelimPosteriors$alpha_intra[,1] + PrelimPosteriors$alpha_intra[,2]*env_ppc[i])
 }
 
 # use the above quantities to calculate the posterior prediction intervals for the new data
@@ -117,7 +123,7 @@ Growth_pred <- matrix(data = NA, nrow = PostLength, ncol = N_ppc)
 Growth_dev <- matrix(data = NA, nrow = PostLength, ncol = N_ppc)
 for(i in 1:PostLength){
         for(j in 1:N_ppc){
-                SigmaTerm <- sum(Prelim_alpha_eij[i,j,] * SpMatrix_ppc[j,])
+                SigmaTerm <- sum(Prelim_alpha_eij[i,j,] * SpMatrix_ppc[j,]) + Prelim_alpha_intra[i,j] * Nt_ppc[j]
                 Ntp1_pred <- Nt_ppc[j] * Prelim_lambda_ei[i,j] / (1 + SigmaTerm)
                 Growth_pred[i,j] <- log((Ntp1_pred + 1)/Nt_ppc[j])
                 Growth_dev[i,j] <- Growth_pred[i,j] - Growth_ppc[j]
@@ -167,10 +173,11 @@ save(FinalFit, FinalPosteriors, Inclusion_ij, file = FitFileName)
 
 # Examine diagnostics and determine if parameters of model run should be updated
 quartz()
+pairs(FinalFit, pars = c("lambdas", "alpha_generic", "alpha_intra"))
 hist(summary(FinalFit)$summary[,"Rhat"])
 hist(summary(FinalFit)$summary[,"n_eff"])
 traceplot(FinalFit, pars = "lambdas")
-traceplot(FinalFit, pars = "alphas")
+traceplot(FinalFit, pars = c("alpha_generic", "alpha_intra"))
 which(Inclusion_ij == 1)
 traceplot(FinalFit, pars = "alpha_hat_ij")
 which(Inclusion_eij == 1)
@@ -179,8 +186,10 @@ traceplot(FinalFit, pars = "alpha_hat_eij")
 # Double check the autocorrelation
 acf(FinalPosteriors$lambdas[,1])
 acf(FinalPosteriors$lambdas[,2])
-acf(FinalPosteriors$alphas[,1])
-acf(FinalPosteriors$alphas[,2])
+acf(FinalPosteriors$alpha_generic[,1])
+acf(FinalPosteriors$alpha_generic[,2])
+acf(FinalPosteriors$alpha_intra[,1])
+acf(FinalPosteriors$alpha_intra[,2])
 for(s in 1:S){
         if(Inclusion_ij[s] == 1){
                 quartz()
@@ -193,33 +202,35 @@ for(s in 1:S){
 }
 
 ########### Posterior Predictive Check
-PostLength <- length(FinalPosteriors$alphas[,1])
+PostLength <- length(FinalPosteriors$alpha_generic[,1])
 # calculate the posterior distributions of the interaction coefficients anad lambdas
 Final_alpha_eij <- array(NA, dim = c(PostLength, N_ppc, S))
+Final_alpha_intra <- matrix(NA, nrow = PostLength, ncol = N_ppc)
 Final_lambda_ei <- matrix(NA, nrow = PostLength, ncol = N_ppc)
 for(i in 1:N_ppc){
         Final_lambda_ei[,i] <- exp(FinalPosteriors$lambdas[,1] + FinalPosteriors$lambdas[,2]*env_ppc[i])
         for(s in 1:S){
                 if(Inclusion_ij[s] == 1){
                         if(Inclusion_eij[s] == 1){
-                                Final_alpha_eij[,i,s] <- exp(FinalPosteriors$alphas[,1] + 
+                                Final_alpha_eij[,i,s] <- exp(FinalPosteriors$alpha_generic[,1] + 
                                         FinalPosteriors$alpha_hat_ij[,s] +
-                                        (FinalPosteriors$alphas[,2] + FinalPosteriors$alpha_hat_eij[,s])*env_ppc[i])
+                                        (FinalPosteriors$alpha_generic[,2] + FinalPosteriors$alpha_hat_eij[,s])*env_ppc[i])
                         }else{
-                                Final_alpha_eij[,i,s] <- exp(FinalPosteriors$alphas[,1] + 
+                                Final_alpha_eij[,i,s] <- exp(FinalPosteriors$alpha_generic[,1] + 
                                         FinalPosteriors$alpha_hat_ij[,s] +
-                                        FinalPosteriors$alphas[,2]*env_ppc[i])
+                                        FinalPosteriors$alpha_generic[,2]*env_ppc[i])
                         }
                 }else{
                         if(Inclusion_eij[s] == 1){
-                                Final_alpha_eij[,i,s] <- exp(FinalPosteriors$alphas[,1] + 
-                                        (FinalPosteriors$alphas[,2] + FinalPosteriors$alpha_hat_eij[,s])*env_ppc[i])
+                                Final_alpha_eij[,i,s] <- exp(FinalPosteriors$alpha_generic[,1] + 
+                                        (FinalPosteriors$alpha_generic[,2] + FinalPosteriors$alpha_hat_eij[,s])*env_ppc[i])
                         }else{
-                                Final_alpha_eij[,i,s] <- exp(FinalPosteriors$alphas[,1] + 
-                                        FinalPosteriors$alphas[,2]*env_ppc[i])
+                                Final_alpha_eij[,i,s] <- exp(FinalPosteriors$alpha_generic[,1] + 
+                                        FinalPosteriors$alpha_generic[,2]*env_ppc[i])
                         }
                 }
         }
+        Final_alpha_intra[,i] <- exp(FinalPosteriors$alpha_intra[,1] + FinalPosteriors$alpha_intra[,2]*env_ppc[i])
 }
 
 # use the above quantities to calculate the posterior prediction intervals for the new data
@@ -227,7 +238,7 @@ Growth_pred <- matrix(data = NA, nrow = PostLength, ncol = N_ppc)
 Growth_dev <- matrix(data = NA, nrow = PostLength, ncol = N_ppc)
 for(i in 1:PostLength){
      for(j in 1:N_ppc){
-          SigmaTerm <- sum(Final_alpha_eij[i,j,] * SpMatrix_ppc[j,])
+          SigmaTerm <- sum(Final_alpha_eij[i,j,] * SpMatrix_ppc[j,]) + Final_alpha_intra[i,j] * Nt_ppc[j]
           Ntp1_pred <- Nt_ppc[j] * Final_lambda_ei[i,j] / (1 + SigmaTerm)
           Growth_pred[i,j] <- log((Ntp1_pred + 1)/Nt_ppc[j])
           Growth_dev[i,j] <- Growth_pred[i,j] - Growth_ppc[j]
@@ -249,10 +260,10 @@ FinalCIwidth <- mean(FinalCIwidths)
 
 # Plot the results from the ppc
 FigName <- paste("Results/monoLambda_envAlpha/", FilePrefix, "ppc.pdf", sep = "")
-Pred_yRange <- range(PrelimPredVals, FinalPredVals) 
-Dev_yRange <- range(PrelimDevVals, FinalDevVals) 
+Pred_yRange <- c(-3.5,2.75)
+Dev_yRange <- c(-1.2,1.2)
 xRange <- range(Growth_ppc)
-ppcCol <- "forestgreen"
+ppcCol <- "purple"
 pdf(file = FigName, width = 10, height = 6, onefile = FALSE, paper = "special")
      par(mar = c(5,4,2,2) + 0.1, mfrow = c(2,2))
      # Upper left: Prelim ppc estimates
@@ -301,7 +312,7 @@ PrelimSlopeDeviation <- PrelimLambdaSlope - TrueLambdaSlope
 FinalInterceptDeviation <- FinalLambdaIntercept - TrueLambdaIntercept
 FinalSlopeDeviation <- FinalLambdaSlope - TrueLambdaSlope
 
-InterceptRange <- c(-2, 2)
+InterceptRange <- c(-2, 4)
 SlopeRange <- c(-1.5, 1.5)
 LambdaCol <- "forestgreen"
 FigName <- paste("Results/monoLambda_envAlpha/", FilePrefix, "lambdas.pdf", sep = "")
@@ -336,27 +347,27 @@ pdf(file = FigName, width = 10, height = 6, onefile = FALSE, paper = "special")
 dev.off()
 
 # Now create the alpha graph
-PrelimInterceptDevs <- matrix(data = NA, nrow = 3, ncol = S)
-PrelimSlopeDevs <- matrix(data = NA, nrow = 3, ncol = S)
-FinalInterceptDevs <- matrix(data = NA, nrow = 3, ncol = S)
-FinalSlopeDevs <- matrix(data = NA, nrow = 3, ncol = S)
+PrelimInterceptDevs <- matrix(data = NA, nrow = 3, ncol = S+1)
+PrelimSlopeDevs <- matrix(data = NA, nrow = 3, ncol = S+1)
+FinalInterceptDevs <- matrix(data = NA, nrow = 3, ncol = S+1)
+FinalSlopeDevs <- matrix(data = NA, nrow = 3, ncol = S+1)
 for(s in 1:S){
-     PrelimIntercepts <- PrelimPosteriors$alphas[,1] + PrelimPosteriors$alpha_hat_ij[,s]
-     PrelimSlopes <- PrelimPosteriors$alphas[,2] + PrelimPosteriors$alpha_hat_ij[,s]
+     PrelimIntercepts <- PrelimPosteriors$alpha_generic[,1] + PrelimPosteriors$alpha_hat_ij[,s]
+     PrelimSlopes <- PrelimPosteriors$alpha_generic[,2] + PrelimPosteriors$alpha_hat_ij[,s]
      if(Inclusion_ij[s] == 1){
-          FinalIntercepts <- FinalPosteriors$alphas[,1] + FinalPosteriors$alpha_hat_ij[,s]
+          FinalIntercepts <- FinalPosteriors$alpha_generic[,1] + FinalPosteriors$alpha_hat_ij[,s]
      }else{
-          FinalIntercepts <- FinalPosteriors$alphas[,1]
+          FinalIntercepts <- FinalPosteriors$alpha_generic[,1]
      }
      if(Inclusion_eij[s] == 1){
-          FinalSlopes <- FinalPosteriors$alphas[,2] + FinalPosteriors$alpha_hat_eij[,s]
+          FinalSlopes <- FinalPosteriors$alpha_generic[,2] + FinalPosteriors$alpha_hat_eij[,s]
      }else{
-          FinalSlopes <- FinalPosteriors$alphas[,2]
+          FinalSlopes <- FinalPosteriors$alpha_generic[,2]
      }
-     PrelimInterceptDev <- PrelimIntercepts - TrueAlphaMeans[s]
-     PrelimSlopeDev <- PrelimSlopes - TrueAlphaSlopes[s]
-     FinalInterceptDev <- FinalIntercepts - TrueAlphaMeans[s]
-     FinalSlopeDev <- FinalSlopes - TrueAlphaSlopes[s]
+     PrelimInterceptDev <- PrelimIntercepts - TrueAlphaMeans[OtherSpecies[s]]
+     PrelimSlopeDev <- PrelimSlopes - TrueAlphaSlopes[OtherSpecies[s]]
+     FinalInterceptDev <- FinalIntercepts - TrueAlphaMeans[OtherSpecies[s]]
+     FinalSlopeDev <- FinalSlopes - TrueAlphaSlopes[OtherSpecies[s]]
      
      PrelimInterceptDevs[1,s] <- mean(PrelimInterceptDev)
      PrelimInterceptDevs[2:3,s] <- hdi(PrelimInterceptDev)
@@ -367,12 +378,25 @@ for(s in 1:S){
      FinalSlopeDevs[1,s] <- mean(FinalSlopeDev)
      FinalSlopeDevs[2:3,s] <- hdi(FinalSlopeDev)
 }
+# Now calculate the intra values
+PrelimInterceptDev <- PrelimPosteriors$alpha_intra[,1] - TrueAlphaMeans[Focal]
+PrelimSlopeDev <- PrelimPosteriors$alpha_intra[,2] - TrueAlphaSlopes[Focal]
+FinalInterceptDev <- FinalPosteriors$alpha_intra[,1] - TrueAlphaMeans[Focal]
+FinalSlopeDev <- FinalPosteriors$alpha_intra[,2] - TrueAlphaSlopes[Focal]
+PrelimInterceptDevs[1,S+1] <- mean(PrelimInterceptDev)
+PrelimInterceptDevs[2:3,S+1] <- hdi(PrelimInterceptDev)
+PrelimSlopeDevs[1,S+1] <- mean(PrelimSlopeDev)
+PrelimSlopeDevs[2:3,S+1] <- hdi(PrelimSlopeDev)
+FinalInterceptDevs[1,S+1] <- mean(FinalInterceptDev)
+FinalInterceptDevs[2:3,S+1] <- hdi(FinalInterceptDev)
+FinalSlopeDevs[1,S+1] <- mean(FinalSlopeDev)
+FinalSlopeDevs[2:3,S+1] <- hdi(FinalSlopeDev)
 
-InterceptSeq <- 1:S - 0.15
-SlopeSeq <- 1:S + 0.15
-xRange <- c(0.5, S+0.5)
-yRange <- range(c(range(PrelimSlopeDevs), range(PrelimInterceptDevs),
-                  range(FinalSlopeDevs), range(FinalInterceptDevs)))
+InterceptSeq <- 1:(S+1) - 0.15
+SlopeSeq <- 1:(S+1) + 0.15
+pchSeq <- c(rep(1,S), 16)
+xRange <- c(0.5, S+1.5)
+yRange <- c(-2, 5.5)
 Dark2Cols <- brewer.pal(n = 8, name = "Dark2")
 estCols <- Dark2Cols[1:2]
 FigName <- paste("Results/monoLambda_envAlpha/", FilePrefix, "alphas.pdf", sep = "")
@@ -383,8 +407,8 @@ pdf(file = FigName, width = 10, height = 3, onefile = FALSE, paper = "special")
           xlab = "", ylab = "", las = 1, xaxt = "n")
      axis(1, at = 1:S, labels = FALSE, tcl = -0.25)
      axis(1, at = seq(3, 15, by = 3))
-     points(x = InterceptSeq, y = PrelimInterceptDevs[1,], col = estCols[1])
-     points(x = SlopeSeq, y = PrelimSlopeDevs[1,], col = estCols[2])
+     points(x = InterceptSeq, y = PrelimInterceptDevs[1,], col = estCols[1], pch = pchSeq)
+     points(x = SlopeSeq, y = PrelimSlopeDevs[1,], col = estCols[2], pch = pchSeq)
      segments(x0 = InterceptSeq, y0 = PrelimInterceptDevs[2,], x1 = InterceptSeq,
               y1 = PrelimInterceptDevs[3,], col = estCols[1])
      segments(x0 = SlopeSeq, y0 = PrelimSlopeDevs[2,], x1 = SlopeSeq,
@@ -397,8 +421,8 @@ pdf(file = FigName, width = 10, height = 3, onefile = FALSE, paper = "special")
           xlab = "", ylab = "", las = 1, xaxt = "n")
      axis(1, at = 1:S, labels = FALSE, tcl = -0.25)
      axis(1, at = seq(3, 15, by = 3))
-     points(x = InterceptSeq, y = FinalInterceptDevs[1,], col = estCols[1])
-     points(x = SlopeSeq, y = FinalSlopeDevs[1,], col = estCols[2])
+     points(x = InterceptSeq, y = FinalInterceptDevs[1,], col = estCols[1], pch = pchSeq)
+     points(x = SlopeSeq, y = FinalSlopeDevs[1,], col = estCols[2], pch = pchSeq)
      segments(x0 = InterceptSeq, y0 = FinalInterceptDevs[2,], x1 = InterceptSeq,
               y1 = FinalInterceptDevs[3,], col = estCols[1])
      segments(x0 = SlopeSeq, y0 = FinalSlopeDevs[2,], x1 = SlopeSeq,
@@ -411,6 +435,29 @@ pdf(file = FigName, width = 10, height = 3, onefile = FALSE, paper = "special")
      mtext("Species", side = 1, line = -2, outer = TRUE)     
 dev.off()
 
+# Finally, make a plot of the fixed parameter priors
+LambdaIntercept <- rnorm(n = 10000, mean = 0, sd = 1)
+LambdaSlope <- rnorm(n = 10000, mean = 0, sd = 1)
+TransformedLambdaIntercept <- exp(LambdaIntercept)
 
+AlphaIntercept <- rnorm(n = 10000, mean = -2, sd = 0.75)
+AlphaSlope <- rnorm(n = 10000, mean = 0, sd = 0.5)
+TransformedAlphaIntercept <- exp(AlphaIntercept)
 
+FigName <- paste("Results/monoLambda_envAlpha/priors.pdf", sep = "")
+pdf(file = FigName, width = 10, height = 6, onefile = FALSE, paper = "special")
+     par(mar = c(5,4,2,2) + 0.1, mfrow = c(2,3))
+     plot(density(LambdaIntercept), xlab = "Lambda intercept", ylab = "", main = "")
+     plot(density(LambdaSlope), xlab = "Lambda slope", ylab = "", main = "")
+     plot(density(TransformedLambdaIntercept), xlab = "exp(Lambda intercept)", ylab = "", main = "")
+
+     plot(density(AlphaIntercept), xlab = "Generic alpha intercept", ylab = "", main = "")
+     plot(density(AlphaSlope), xlab = "Generic alpha slope", ylab = "", main = "")
+     plot(density(TransformedAlphaIntercept), xlab = "exp(Generic alpha intercept)", ylab = "", main = "")
+dev.off()
+
+which(Inclusion_ij == 1)
+# 5, 7, 10, 13 (will be 12 here)
+which(Inclusion_eij == 1)
+# 1, 8, 9, 10
 

@@ -8,27 +8,31 @@ data{
 
   int Inclusion_ij[S];
   int Inclusion_eij[S];
-  
-  // Include the data for the posterior predictive check
-  int<lower = 1> N_ppc;
-  int<lower = 0> Nt_ppc[N_ppc];
-  matrix[N_ppc,S] SpMatrix_ppc;
-  vector[N_ppc] env_ppc;
 }
 
 parameters{
   vector[2] lambdas;    // 1: intercept, 2: slope
-  vector[2] alphas_tilde;
-  vector[S] alpha_hat_ij;
-  vector[S] alpha_hat_eij;
+  vector[2] alpha_generic_tilde;
+  vector[2] alpha_intra_tilde;
+  vector[S] alpha_hat_ij_tilde;
+  vector[S] alpha_hat_eij_tilde;
 }
 
 transformed parameters{
-  vector[2] alphas;
+  vector[2] alpha_generic;
+  vector[2] alpha_intra;
+  vector[S] alpha_hat_ij;
+  vector[S] alpha_hat_eij;
 
   // scale the lambdas and alphas values
-  alphas[1] = 1.75 * alphas_tilde[1] - 7;
-  alphas[2] = alphas_tilde[2] * 0.5;
+  alpha_generic[1] = 0.75 * alpha_generic_tilde[1] - 2;
+  alpha_intra[1] = 0.75 * alpha_intra_tilde[1] - 2;
+  alpha_generic[2] = alpha_generic_tilde[2] * 0.5;
+  alpha_intra[2] = alpha_intra_tilde[2] * 0.5;
+  for(s in 1:S){
+       alpha_hat_ij[s] = 0.75 * alpha_hat_ij_tilde[s] - 2;
+       alpha_hat_eij[s] = alpha_hat_eij_tilde[s] * 0.5;
+  }
 }
 
 model{
@@ -41,10 +45,11 @@ model{
   vector[N] lambda_ei;
 
   // set regular priors
-  alphas_tilde ~ normal(0,1);
+  alpha_generic_tilde ~ normal(0,1);
+  alpha_intra_tilde ~ normal(0,1);
   lambdas ~ normal(0,1);
-  alpha_hat_ij ~ normal(0,1);
-  alpha_hat_eij ~ normal(0,1);
+  alpha_hat_ij_tilde ~ normal(0,1);
+  alpha_hat_eij_tilde ~ normal(0,1);
 
   // implement the biological model
   for(i in 1:N){
@@ -52,19 +57,19 @@ model{
     for(s in 1:S){
       if(Inclusion_ij[s] == 1){
         if(Inclusion_eij[s] == 1){
-          alpha_eij[i,s] = exp(alphas[1] + alpha_hat_ij[s] + (alphas[2] + alpha_hat_eij[s]) * env[i]);
+          alpha_eij[i,s] = exp(alpha_generic[1] + alpha_hat_ij[s] + (alpha_generic[2] + alpha_hat_eij[s]) * env[i]);
         }else{
-          alpha_eij[i,s] = exp(alphas[1] + alpha_hat_ij[s] + alphas[2] * env[i]);
+          alpha_eij[i,s] = exp(alpha_generic[1] + alpha_hat_ij[s] + alpha_generic[2] * env[i]);
         }
       }else{
         if(Inclusion_eij[s] == 1){
-          alpha_eij[i,s] = exp(alphas[1] + (alphas[2] + alpha_hat_eij[s]) * env[i]);
+          alpha_eij[i,s] = exp(alpha_generic[1] + (alpha_generic[2] + alpha_hat_eij[s]) * env[i]);
         }else{
-          alpha_eij[i,s] = exp(alphas[1] + alphas[2] * env[i]);
+          alpha_eij[i,s] = exp(alpha_generic[1] + alpha_generic[2] * env[i]);
         }
       }
     }
-    interaction_effects[i] = sum(alpha_eij[i,] .* SpMatrix[i,]);
+    interaction_effects[i] = sum(alpha_eij[i,] .* SpMatrix[i,]) + exp(alpha_intra[1] + alpha_intra[2] * env[i]) * Nt[i];
     Ntp1_hat[i] = Nt[i] * lambda_ei[i] / (1 + interaction_effects[i]);
     if(Ntp1_hat[i] > 0){
       Ntp1[i] ~ poisson(Ntp1_hat[i]);
