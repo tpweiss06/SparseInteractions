@@ -169,7 +169,7 @@ FinalFit <- stan(file = FinalStanPath, data = FinalDataVec, iter = 3000,
                  control = list(adapt_delta = 0.99, max_treedepth = 15))
 FinalPosteriors <- extract(FinalFit)
 FitFileName <- paste("StanFits/monoLambda_envAlpha/", FilePrefix, "FinalFit.rdata", sep = "")
-save(FinalFit, FinalPosteriors, Inclusion_ij, file = FitFileName)
+save(FinalFit, FinalPosteriors, Inclusion_ij, Inclusion_eij, file = FitFileName)
 
 # Examine diagnostics and determine if parameters of model run should be updated
 quartz()
