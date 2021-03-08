@@ -38,10 +38,11 @@ slab_scale <- log(2)
 slab_df <- 25
 
 # Set initial values to avoid initial problems with the random number generator
-ChainInitials <- list(lambdas_tilde = c(1,0), alpha_generic_tilde = c(0,0), alpha_hat_ij_tilde = rep(0, S),
-                      local_shrinkage_ij = rep(5, S), c2_tilde = 1.25, tau_tilde = 15,
-                      alpha_hat_eij_tilde = rep(0, S), local_shrinkage_eij = rep(5, S),
-                      alpha_intra_tilde = c(0,0))
+ChainInitials <- list(lambdas = c(TrueVals$lambda.mean[Focal], TrueVals$lambda.env[Focal]), 
+                      alpha_generic_tilde = c(mean(TrueAlphaMeans)/0.75 + 1, TrueAlphaSlopes[Focal]/0.5), 
+                      alpha_hat_ij_tilde = rep(0, S), alpha_hat_eij_tilde = rep(0, S), c2_tilde = 1.25,
+                      local_shrinkage_ij = rep(5, S), local_shrinkage_eij = rep(5, S) , tau_tilde = 15,
+                      alpha_intra_tilde = c(TrueAlphaMeans[Focal], TrueAlphaSlopes[Focal]))
 InitVals <- list(ChainInitials, ChainInitials, ChainInitials)
 
 # save the values for the posterior predictive checks
@@ -392,9 +393,14 @@ FinalInterceptDevs[2:3,S+1] <- hdi(FinalInterceptDev)
 FinalSlopeDevs[1,S+1] <- mean(FinalSlopeDev)
 FinalSlopeDevs[2:3,S+1] <- hdi(FinalSlopeDev)
 
-InterceptSeq <- 1:(S+1) - 0.15
-SlopeSeq <- 1:(S+1) + 0.15
-pchSeq <- c(rep(1,S), 16)
+# Graph by order of intercept strength with lowest on left and intraspecific (highest) on right
+# sort OtherSpecies alpha values in ascending order and use those indices to do the graphing
+OtherSpeciesAlphas <- data.frame(species = OtherSpecies, intercepts = TrueAlphaMeans[OtherSpecies])
+OrderedIntercepts <- OtherSpeciesAlphas[order(OtherSpeciesAlphas$intercepts),]
+OrderedIntercepts$species <- ifelse(OrderedIntercepts$species > 11, OrderedIntercepts$species - 1, OrderedIntercepts$species)
+
+InterceptSeq <- 1:S - 0.15
+SlopeSeq <- 1:S + 0.15
 xRange <- c(0.5, S+1.5)
 yRange <- c(-2, 5.5)
 Dark2Cols <- brewer.pal(n = 8, name = "Dark2")
@@ -407,12 +413,17 @@ pdf(file = FigName, width = 10, height = 3, onefile = FALSE, paper = "special")
           xlab = "", ylab = "", las = 1, xaxt = "n")
      axis(1, at = 1:S, labels = FALSE, tcl = -0.25)
      axis(1, at = seq(3, 15, by = 3))
-     points(x = InterceptSeq, y = PrelimInterceptDevs[1,], col = estCols[1], pch = pchSeq)
-     points(x = SlopeSeq, y = PrelimSlopeDevs[1,], col = estCols[2], pch = pchSeq)
-     segments(x0 = InterceptSeq, y0 = PrelimInterceptDevs[2,], x1 = InterceptSeq,
-              y1 = PrelimInterceptDevs[3,], col = estCols[1])
-     segments(x0 = SlopeSeq, y0 = PrelimSlopeDevs[2,], x1 = SlopeSeq,
-              y1 = PrelimSlopeDevs[3,], col = estCols[2])
+     points(x = InterceptSeq, y = PrelimInterceptDevs[1,OrderedIntercepts$species], col = estCols[1])
+     points(x = SlopeSeq, y = PrelimSlopeDevs[1,OrderedIntercepts$species], col = estCols[2])
+     segments(x0 = InterceptSeq, y0 = PrelimInterceptDevs[2,OrderedIntercepts$species], x1 = InterceptSeq,
+              y1 = PrelimInterceptDevs[3,OrderedIntercepts$species], col = estCols[1])
+     segments(x0 = SlopeSeq, y0 = PrelimSlopeDevs[2,OrderedIntercepts$species], x1 = SlopeSeq,
+              y1 = PrelimSlopeDevs[3,OrderedIntercepts$species], col = estCols[2])
+     # Add the intra values
+     points(x = S+1 - 0.15, y = PrelimInterceptDevs[1,S+1], col = estCols[1], pch = 16)
+     points(x = S+1 + 0.15, y = PrelimSlopeDevs[1,S+1], col = estCols[2], pch = 16)
+     segments(x0 = S+1 - 0.15, y0 = PrelimInterceptDevs[2,S+1], y1 = PrelimInterceptDevs[3,S+1], col = estCols[1])
+     segments(x0 = S+1 + 0.15, y0 = PrelimSlopeDevs[2,S+1], y1 = PrelimSlopeDevs[3,S+1], col = estCols[2])
      abline(h = 0, lty = 2)
      mtext("Preliminary model fit", side = 3, line = 1)
      mtext("Alpha deviations", side = 2, line = -1, outer = TRUE, adj = 0.6)
@@ -421,12 +432,17 @@ pdf(file = FigName, width = 10, height = 3, onefile = FALSE, paper = "special")
           xlab = "", ylab = "", las = 1, xaxt = "n")
      axis(1, at = 1:S, labels = FALSE, tcl = -0.25)
      axis(1, at = seq(3, 15, by = 3))
-     points(x = InterceptSeq, y = FinalInterceptDevs[1,], col = estCols[1], pch = pchSeq)
-     points(x = SlopeSeq, y = FinalSlopeDevs[1,], col = estCols[2], pch = pchSeq)
-     segments(x0 = InterceptSeq, y0 = FinalInterceptDevs[2,], x1 = InterceptSeq,
-              y1 = FinalInterceptDevs[3,], col = estCols[1])
-     segments(x0 = SlopeSeq, y0 = FinalSlopeDevs[2,], x1 = SlopeSeq,
-              y1 = FinalSlopeDevs[3,], col = estCols[2])
+     points(x = InterceptSeq, y = FinalInterceptDevs[1,OrderedIntercepts$species], col = estCols[1], pch = pchSeq)
+     points(x = SlopeSeq, y = FinalSlopeDevs[1,OrderedIntercepts$species], col = estCols[2], pch = pchSeq)
+     segments(x0 = InterceptSeq, y0 = FinalInterceptDevs[2,OrderedIntercepts$species], x1 = InterceptSeq,
+              y1 = FinalInterceptDevs[3,OrderedIntercepts$species], col = estCols[1])
+     segments(x0 = SlopeSeq, y0 = FinalSlopeDevs[2,OrderedIntercepts$species], x1 = SlopeSeq,
+              y1 = FinalSlopeDevs[3,OrderedIntercepts$species], col = estCols[2])
+     # Add the intra values
+     points(x = S+1 - 0.15, y = FinalInterceptDevs[1,S+1], col = estCols[1], pch = 16)
+     points(x = S+1 + 0.15, y = FinalSlopeDevs[1,S+1], col = estCols[2], pch = 16)
+     segments(x0 = S+1 - 0.15, y0 = FinalInterceptDevs[2,S+1], y1 = FinalInterceptDevs[3,S+1], col = estCols[1])
+     segments(x0 = S+1 + 0.15, y0 = FinalSlopeDevs[2,S+1], y1 = FinalSlopeDevs[3,S+1], col = estCols[2])
      abline(h = 0, lty = 2)
      legend(x = "bottomleft", legend = c("Intercept", "Slope"), pch = 1, col = estCols,
             bty = "n")
@@ -460,4 +476,12 @@ which(Inclusion_ij == 1)
 # 5, 7, 10, 13 (will be 12 here)
 which(Inclusion_eij == 1)
 # 1, 8, 9, 10
+
+# Save certain values for trying out alternative graphs
+GraphStuff <- list(ppc_x = Growth_ppc, ppc_pred = FinalPredVals, ppc_dev = FinalDevVals,
+                   LambdaIntercept = FinalInterceptDeviation, LambdaSlope = FinalSlopeDeviation,
+                   AlphaIntercept = FinalInterceptDevs, AlphaSlope = FinalSlopeDevs)
+FileName <- paste("StanFits/monoLambda_envAlpha/", FilePrefix, "GraphStuff.rdata", sep = "")
+save(GraphStuff, OrderedIntercepts, TrueAlphaMeans, TrueAlphaSlopes, Focal,
+     file = FileName)
 
