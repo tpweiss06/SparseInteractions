@@ -8,6 +8,7 @@ data{
   int<lower = 0> Ntp1[N];
   matrix[N,S] SpMatrix;
   vector[N] env;
+  int<lower = 0> Intra[S];
   real tau0; 		// determines the scale of the global shrinkage parameter (tau)
   real slab_scale;	// scale for significant alpha_sp values
   real slab_df;		// effective degrees of freedom for significant alpha_sp values
@@ -54,10 +55,10 @@ transformed parameters{
     alpha_hat_eij[s] = tau * local_shrinkage_eij_tilde[s] * alpha_hat_eij_tilde[s];
   }
 
-  // scale the lambdas and alphas values
-  alpha_generic[1] = 0.75 * alpha_generic_tilde[1] - 2;
-  alpha_intra[1] = 0.75 * alpha_intra_tilde[1] - 2;
+  // scale the alpha values
+  alpha_generic[1] = 3 * alpha_generic_tilde[1] - 6;
   alpha_generic[2] = alpha_generic_tilde[2] * 0.5;
+  alpha_intra[1] = 3 * alpha_intra_tilde[1] - 6;
   alpha_intra[2] = alpha_intra_tilde[2] * 0.5;
 }
 
@@ -90,9 +91,9 @@ model{
   for(i in 1:N){
     lambda_ei[i] = exp(lambdas[1] + lambdas[2]*env[i]);
     for(s in 1:S){
-        alpha_eij[i,s] = exp(alpha_generic[1] + alpha_hat_ij[s] + (alpha_generic[2] + alpha_hat_eij[s]) * env[i]);
+        alpha_eij[i,s] = exp((1-Intra[s]) * alpha_generic[1] + Intra[s] * alpha_intra[1] + (1-Intra[s]) * alpha_hat_ij[s] + ((1-Intra[s]) * alpha_generic[2] + (1-Intra[s]) * alpha_hat_eij[s] + Intra[s] * alpha_intra[2]) * env[i]);
     }
-    interaction_effects[i] = sum(alpha_eij[i,] .* SpMatrix[i,]) + exp(alpha_intra[1] + alpha_intra[2]*env[i]) * Nt[i];
+    interaction_effects[i] = sum(alpha_eij[i,] .* SpMatrix[i,]);
     
     Ntp1_hat[i] = Nt[i] * lambda_ei[i] / (1 + interaction_effects[i]);
     if(Ntp1_hat[i] > 0){

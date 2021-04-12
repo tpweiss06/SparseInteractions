@@ -12,20 +12,16 @@ parameters{
   vector[2] lambdas;   // 1: intercept, 2: slope
   real alpha_generic_tilde;
   real alpha_intra_tilde;
-  vector[S] alpha_hat_ij_tilde;
+  vector[S] alpha_hat_ij;
 }
 
 transformed parameters{
-  vector[S] alpha_hat_ij;
   real alpha_generic;
   real alpha_intra;
 
   // scale the lambdas and alpha values
   alpha_generic = 0.75 * alpha_generic_tilde - 2;
   alpha_intra = 0.75 * alpha_intra_tilde - 2;
-  for(s in 1:S){
-    alpha_hat_ij[s] = 0.75 * alpha_hat_ij_tilde[s] - 2;
-  }
 }
 
 model{
@@ -41,7 +37,7 @@ model{
   alpha_generic_tilde ~ normal(0,1);
   alpha_intra_tilde ~ normal(0,1);
   lambdas ~ normal(0,1);
-  alpha_hat_ij_tilde ~ normal(0,1);
+  alpha_hat_ij ~ normal(0,1);
   
   // implement the biological model
   for(s in 1:S){

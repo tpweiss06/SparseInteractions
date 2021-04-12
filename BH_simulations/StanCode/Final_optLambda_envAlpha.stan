@@ -16,13 +16,11 @@ parameters{
   real<lower = 0> lambda_width;
   vector[2] alpha_generic_tilde;
   vector[2] alpha_intra_tilde;
-  vector[S] alpha_hat_ij_tilde;
-  vector[S] alpha_hat_eij_tilde;
+  vector[S] alpha_hat_ij;
+  vector[S] alpha_hat_eij;
 }
 
 transformed parameters{
-  vector[S] alpha_hat_ij;
-  vector[S] alpha_hat_eij;
   vector[2] alpha_generic;
   vector[2] alpha_intra;
 
@@ -31,10 +29,6 @@ transformed parameters{
   alpha_intra[1] = 0.75 * alpha_intra_tilde[1] - 2;
   alpha_generic[2] = 0.5* alpha_generic_tilde[2];
   alpha_intra[2] = 0.5* alpha_intra_tilde[2];
-  for(s in 1:S){
-    alpha_hat_ij[s] = 0.75 * alpha_hat_ij_tilde[s] - 2;
-    alpha_hat_eij[s] = 0.5 * alpha_hat_eij_tilde[s];
-  }
 }
 
 model{
@@ -52,8 +46,8 @@ model{
   lambda_opt ~ normal(0, 1);
   lambda_max ~ normal(0, 7.5);
   lambda_width ~ normal(0, 1);
-  alpha_hat_ij_tilde ~ normal(0,1);
-  alpha_hat_eij_tilde ~ normal(0,1);
+  alpha_hat_ij ~ normal(0,1);
+  alpha_hat_eij ~ normal(0,1);
 
   // implement the biological model
   for(i in 1:N){

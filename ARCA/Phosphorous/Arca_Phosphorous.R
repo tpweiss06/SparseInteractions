@@ -1,18 +1,15 @@
-# This script will run the BH_FH_Preliminary.stan model on Teton, save some output
-#    including figures on Rhat, n_eff, and autocorrelation. Then, if appropriate,
-#    run the BH_Final.stan model and save the output for each.
+# This script will run the empirical model fits for each focal species and each
+#       environmental covariate. A separate script will then make the empirical
+#       figures for the manuscript
 
-# Focal Species: Waitzia acuminata
+setwd("~/Desktop/Wyoming/SparseInteractions/")
 
-FocalLetter <- "A"
-FocalPrefix <- "ARCA"
-# Environmental covariate: Phosphorous
+FocalLetter <- "A" # "W"
+FocalPrefix <- "ARCA" # "Waitzia"
+FocalSpecies <- "Arctotheca.calendula" # "Waitzia.acuminata"
 
-EnvCov <- "Phos"
-EnvCol <- 71  # Phosphorous
-# EnvCol <- 72  # Canopy
-
-PlotLabel <- "Standardized phosphorous"
+EnvCov <- "Phos" # "Shade"
+EnvCol <- 71  # 72 for Canopy
 
 # Load in the data and subset out the current focal species.
 SpData <- read.csv("water_full_env.csv")
@@ -44,22 +41,23 @@ for(s in 1:ncol(AllSpAbunds)){
      }
 }
 SpNames <- AllSpNames[SpToKeep]
+Intra <- ifelse(SpNames == FocalSpecies, 1, 0)
 
-# laod rstan, set the parameters for the Finnish Horseshoe, and create a vector
+# load rstan, set the parameters for the Finnish Horseshoe, and create a vector
 #       of all the data objects needed for the model
 library(rstan)
 options(mc.cores = parallel::detectCores())
 rstan_options(auto_write = TRUE)
-tau0 <- 1
-slab_scale <- log(2)
-slab_df <- 25
-DataVec <- c("N", "S", "Fecundity", "reserve", "SpMatrix", "env", "tau0", "slab_scale", "slab_df")
+tau0 <- 2
+slab_scale <- 1
+slab_df <- 2*S - 1
+DataVec <- c("N", "S", "Fecundity", "reserve", "SpMatrix", "env", "Intra", "tau0", "slab_scale", "slab_df")
 
 # Now run a perliminary fit of the model to assess parameter shrinkage
-PrelimFit <- stan(file = "BH_FH_Preliminary.stan", data = DataVec, iter = 6000, 
-                  chains = 3, control = list(adapt_delta = 0.999, max_treedepth = 15))
+PrelimFit <- stan(file = "Model Code/BH_FH_Preliminary.stan", data = DataVec, iter = 3000, 
+                  chains = 3)
 save(PrelimFit, SpNames, N, S, Fecundity, reserve, SpMatrix, env, tau0, slab_scale, slab_df,
-     file = paste(FocalPrefix, EnvCov, "PrelimFit.rdata", sep = "_"))
+     file = paste("ARCA/Phosphorous/Model Fits/" FocalPrefix, EnvCov, "PrelimFit.rdata", sep = "_"))
      
 # Now evaluate some of the model diagnostics and save them as figures
 PrelimPosteriors <- extract(PrelimFit)
