@@ -4,26 +4,28 @@
 #    on 300 out of sample data points, calculate the deviance in parameter 
 #    estimates from the true values, and save it all for later plotting.
 
+# Species 10 in test 5 is what we're going with!!
+
 setwd("~/Desktop/Wyoming/SparseInteractions/BH_simulations/")
 
 # Set the current sample size and associated prefix for all graph and result
 #    file names
-N <- 200
+N <- 50
 max_N <- 200
 FilePrefix <- paste("N", N, "_", sep = "")
 
 # Now assign the focal species and the file paths for the stan models
-NonGenericIntercept <- c(1, 2, 5, 6, 10, 12, 15)
-NonGenericSlope <- c(1, 2, 6, 9, 11, 13, 15)
-Focal <- 14
+#NonGenericIntercept <- c(1, 2, 5, 6, 10, 12, 15)
+#NonGenericSlope <- c(1, 2, 6, 9, 11, 13, 15)
+Focal <- 1
 PrelimStanPath <- "StanCode/Prelim_monoLambda_envAlpha.stan"
 FinalStanPath <- "StanCode/Final_monoLambda_envAlpha.stan"
 
 # Load in the appropriate data
-FullSim <- read.csv("Simulations/simulation_3.csv")
-ThinSim <- read.csv("Simulations/simulation_thinned_3.csv")
-TrueVals <- read.csv("Simulations/parameters_3.csv")
-TrueAlphaMeans <- TrueVals$alpha.14
+FullSim <- read.csv("Simulations/simulation_perturb4.csv")
+#ThinSim <- read.csv("Simulations/simulation_thinned_5_10.csv")
+TrueVals <- read.csv("Simulations/parameters_perturb4.csv")
+TrueAlphaMeans <- TrueVals$alpha.1
 TrueAlphaSlopes <- TrueVals$alpha.env.gen + TrueVals$alpha.env.spec
 
 # Load necessary libraries
@@ -39,7 +41,7 @@ Intra <- rep(0, S)
 Intra[Focal] <- 1
 tau0 <- 2
 slab_df <- 2*S - 1
-slab_scale <- 0.25
+slab_scale <- 1 #1 #0.25 #log(2) #0.25 # 1 seems to work best, but have Chhaya remove the central values to really emphasize differences in test 2
 
 # Set initial values to avoid initial problems with the random number generator
 ChainInitials <- list(lambdas = c(TrueVals$lambda.mean[Focal], TrueVals$lambda.env[Focal]), 
@@ -50,7 +52,7 @@ ChainInitials <- list(lambdas = c(TrueVals$lambda.mean[Focal], TrueVals$lambda.e
 InitVals <- list(ChainInitials, ChainInitials, ChainInitials)
 
 # save the values for the posterior predictive checks
-ppc_data <- subset(FullSim, (species == Focal) & (run > max_N) & (time == 0))
+ppc_data <- subset(FullSim, (species == Focal) & (run > max_N) & (time == 0) & (thinned == 0))
 ppc_points <- which(ppc_data$pop > 0)
 ppc_runs <- ppc_data$run[ppc_points]
 N_ppc <- length(ppc_points)
@@ -58,9 +60,9 @@ Nt_ppc <- ppc_data$pop[ppc_points]
 env_ppc <- ppc_data$run.env[ppc_points]
 SpMatrix_ppc <- matrix(data = NA, nrow = N_ppc, ncol = S)
 for(s in 1:S){
-     SpMatrix_ppc[,s] <- subset(FullSim, (species == s) & (run %in% ppc_runs) & (time == 0))$pop
+     SpMatrix_ppc[,s] <- subset(FullSim, (species == s) & (run %in% ppc_runs) & (time == 0) & (thinned == 0))$pop
 }
-Ntp1_ppc <- subset(FullSim, (species == Focal) & (run %in% ppc_runs) & (time == 1))$pop
+Ntp1_ppc <- subset(FullSim, (species == Focal) & (run %in% ppc_runs) & (time == 1) & (thinned == 0))$pop
 Growth_ppc <- log((Ntp1_ppc + 1)/Nt_ppc)
 
 # Create the data vectors to be passed to rstan for subsequent model fits
@@ -68,28 +70,22 @@ PrelimDataVec <- c("N", "S", "Nt", "Ntp1", "SpMatrix", "env", "Intra", "tau0", "
 FinalDataVec <- c("N", "S", "Nt", "Ntp1", "SpMatrix", "env", "Intra", "Inclusion_ij", "Inclusion_eij")
 
 # Set the local values to pass to rstan
-FullData <- subset(FullSim, (species == Focal) & (run <= N) & (time == 0))
-ThinData <- subset(ThinSim, (species == Focal) & (run <= N) & (time == 0))
+FullData <- subset(FullSim, (species == Focal) & (run <= N) & (time == 0) & (thinned == 0))
+ThinData <- subset(FullSim, (species == Focal) & (run <= N) & (time == 0) & (thinned == 1))
 Nt <- c(FullData$pop, ThinData$pop)
 env <- c(FullData$run.env, ThinData$run.env)
 SpMatrix <- matrix(data = NA, nrow = 2*N, ncol = S)
 for(s in 1:S){
-     SpMatrix[1:N,s] <- subset(FullSim, (species == s) & (run <= N) & (time == 0))$pop
-     SpMatrix[(N+1):(2*N),s] <- subset(ThinSim, (species == s) & (run <= N) & (time == 0))$pop
+     SpMatrix[1:N,s] <- subset(FullSim, (species == s) & (run <= N) & (time == 0) & (thinned == 0))$pop
+     SpMatrix[(N+1):(2*N),s] <- subset(FullSim, (species == s) & (run <= N) & (time == 0) & (thinned == 1))$pop
 }
-Ntp1 <- c(subset(FullSim, (species == Focal) & (run <= N) & (time == 1))$pop,
-          subset(ThinSim, (species == Focal) & (run <= N) & (time == 1))$pop)
-
-
-# use the species matrix to set the slab scale
-#slab_scale <- abs(log(1 / mean(rowMeans(SpMatrix[1:(N/2),]))))
-#slab_scale <- 1
-# 0.25 gets more intercepts and slopes than true values; missing 2 intercepts and 3 slopes
+Ntp1 <- c(subset(FullSim, (species == Focal) & (run <= N) & (time == 1) & (thinned == 0))$pop,
+          subset(FullSim, (species == Focal) & (run <= N) & (time == 1) & (thinned == 1))$pop)
 
 # Now run the preliminary fit of the model to assess parameter shrinkage
 N <- 2*N
 PrelimFit <- stan(file = PrelimStanPath, data = PrelimDataVec, iter = 3000,
-                  chains = 3, init = InitVals)#, control = list(adapt_delta = 0.99))
+                  chains = 3, init = InitVals)#, control = list(adapt_delta = 0.95))
 PrelimPosteriors <- extract(PrelimFit)
 
 # Examine diagnostics and determine if parameters of model run should be updated
@@ -152,7 +148,7 @@ InitVals <- list(ChainInitials, ChainInitials, ChainInitials)
 
 # Run the final fit of the model
 FinalFit <- stan(file = FinalStanPath, data = FinalDataVec, iter = 3000,
-                 chains = 3, init = InitVals)
+                 chains = 3, init = InitVals, control = list(adapt_delta = 0.9))
 Posteriors <- extract(FinalFit)
 FitFileName <- paste("StanFits/monoLambda_envAlpha/", FilePrefix, "FinalFit.rdata", sep = "")
 save(FinalFit, Posteriors, Inclusion_ij, Inclusion_eij, file = FitFileName)
@@ -252,8 +248,19 @@ for(s in 1:S){
         }
 }
 
+# Finally, calculate the "true" generic alpha that the model is attempting to estimate
+# alpha_generic * sigma(N) = sigma(N*alpha_ij)
+GenericIntercepts <- 1 - Inclusion_ij
+GenericSlopes <- 1 - Inclusion_eij
+GenericIntercepts[Focal] <- 0
+GenericSlopes[Focal] <- 0
+TrueGenericIntercept <- log(sum(colSums(SpMatrix) * GenericIntercepts * exp(TrueAlphaMeans)) / sum(colSums(SpMatrix) * GenericIntercepts))
+Totals <- colSums(SpMatrix) * GenericSlopes
+TrueGenericSlope <- mean(TrueAlphaSlopes*GenericSlopes*(Totals/max(Totals)))
+
 # Finally, save all the necessary results for the figures
 FileName <- paste("StanFits/monoLambda_envAlpha/", FilePrefix, "GraphStuff.rdata", sep = "")
 save(PredVals, Growth_ppc, LambdaEsts, AlphaEsts, Inclusion_eij, Inclusion_ij,
-     NonGenericSlope, NonGenericIntercept, file = FileName)
+     TrueGenericIntercept, TrueGenericSlope,
+     file = FileName)
 
