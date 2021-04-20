@@ -6,7 +6,8 @@
 
 # Species 10 in test 5 is what we're going with!!
 
-setwd("~/Desktop/Wyoming/SparseInteractions/BH_simulations/")
+#setwd("~/Desktop/Wyoming/SparseInteractions/BH_simulations/")
+setwd("~/Documents/Work/Current Papers/SparseInteractions/BH_simulations/")
 
 # Set the current sample size and associated prefix for all graph and result
 #    file names
@@ -22,9 +23,9 @@ PrelimStanPath <- "StanCode/Prelim_monoLambda_envAlpha.stan"
 FinalStanPath <- "StanCode/Final_monoLambda_envAlpha.stan"
 
 # Load in the appropriate data
-FullSim <- read.csv("Simulations/simulation_perturb4.csv")
+FullSim <- read.csv("Simulations/simulation_perturb2.csv")
 #ThinSim <- read.csv("Simulations/simulation_thinned_5_10.csv")
-TrueVals <- read.csv("Simulations/parameters_perturb4.csv")
+TrueVals <- read.csv("Simulations/parameters_perturb2.csv")
 TrueAlphaMeans <- TrueVals$alpha.1
 TrueAlphaSlopes <- TrueVals$alpha.env.gen + TrueVals$alpha.env.spec
 
@@ -41,7 +42,7 @@ Intra <- rep(0, S)
 Intra[Focal] <- 1
 tau0 <- 2
 slab_df <- 2*S - 1
-slab_scale <- 1 #1 #0.25 #log(2) #0.25 # 1 seems to work best, but have Chhaya remove the central values to really emphasize differences in test 2
+slab_scale <- 1 
 
 # Set initial values to avoid initial problems with the random number generator
 ChainInitials <- list(lambdas = c(TrueVals$lambda.mean[Focal], TrueVals$lambda.env[Focal]), 
