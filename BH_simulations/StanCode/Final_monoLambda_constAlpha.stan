@@ -42,7 +42,7 @@ model{
   
   // implement the biological model
   for(s in 1:S){
-        alpha_ij[s] = exp((1-Intra[s]) * alpha_generic + Intra[s] * alpha_intra + (1-Intra[s]) * alpha_hat_ij[s]);
+        alpha_ij[s] = exp((1-Intra[s]) * alpha_generic + Intra[s] * alpha_intra + Inclusion_ij[s] * alpha_hat_ij[s]);
   }
   for(i in 1:N){
     lambda_ei[i] = exp(lambdas[1] + lambdas[2]*env[i]);

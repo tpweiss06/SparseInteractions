@@ -4,7 +4,8 @@
 #    parameter estimates and posterior predictive checks on 300 out of sample
 #    data points.
 
-setwd("~/Desktop/Wyoming/SparseInteractions/BH_simulations/")
+#setwd("~/Desktop/Wyoming/SparseInteractions/BH_simulations/")
+setwd("~/Documents/Work/Current Papers/SparseInteractions/BH_simulations/")
 
 # Set the current sample size and associated prefix for all graph and result
 #    file names
@@ -18,8 +19,8 @@ PrelimStanPath <- "StanCode/Prelim_optLambda_constAlpha.stan"
 FinalStanPath <- "StanCode/Final_optLambda_constAlpha.stan"
 
 # Load in the appropriate data
-FullSim <- read.csv("Simulations/simulation_2.csv")
-TrueVals <- read.csv("Simulations/parameters_2.csv")
+FullSim <- read.csv("Simulations/simulation_perturb_opt_const.csv")
+TrueVals <- read.csv("Simulations/parameters_perturb_opt_const.csv")
 TrueAlphas <- exp(TrueVals$alpha.8)
 TrueLambdaOpt <- TrueVals$z.env[Focal]
 TrueLambdaMax <- TrueVals$lambda.max[Focal]
@@ -33,19 +34,22 @@ options(mc.cores = parallel::detectCores())
 rstan_options(auto_write = TRUE)
 
 # assign some universal values to be used across model fits and graphs
-S <- 14
-OtherSpecies <- setdiff(1:15, Focal)
-tau0 <- 1
-slab_scale <- log(2)
-slab_df <- 25
+S <- 15
+Intra <- rep(0, S)
+Intra[Focal] <- 1
+tau0 <- 2
+slab_df <- 2*S - 1
+slab_scale <- 1
 
 # Set initial values to avoid initial problems with the random number generator
-ChainInitials <- list(lambda_max = 1, lambda_opt = 0, lambda_width = 0.5, alpha_generic_tilde = 0, alpha_hat_ij_tilde = rep(0, S),
-                      local_shrinkage_ij = rep(5, S), c2_tilde = 1.25, tau_tilde = 15, alpha_intra_tilde = 0)
+ChainInitials <- list(lambda_max = 1, lambda_opt = 0, lambda_width = 0.5, 
+                      alpha_generic_tilde = 0, alpha_hat_ij_tilde = rep(0, S),
+                      local_shrinkage_ij = rep(5, S), c2_tilde = 1.25, tau_tilde = 15, 
+                      alpha_intra_tilde = 0)
 InitVals <- list(ChainInitials, ChainInitials, ChainInitials)
 
 # save the values for the posterior predictive checks
-ppc_data <- subset(FullSim, (species == Focal) & (run > max_N) & (time == 0))
+ppc_data <- subset(FullSim, (species == Focal) & (run > max_N) & (time == 0) & (thinned == 0))
 ppc_points <- which(ppc_data$pop > 0)
 ppc_runs <- ppc_data$run[ppc_points]
 N_ppc <- length(ppc_points)
@@ -53,47 +57,54 @@ Nt_ppc <- ppc_data$pop[ppc_points]
 env_ppc <- ppc_data$run.env[ppc_points]
 SpMatrix_ppc <- matrix(data = NA, nrow = N_ppc, ncol = S)
 for(s in 1:S){
-     SpMatrix_ppc[,s] <- subset(FullSim, (species == OtherSpecies[s]) & (run %in% ppc_runs) & (time == 0))$pop
+        SpMatrix_ppc[,s] <- subset(FullSim, (species == s) & (run %in% ppc_runs) &
+                                           (time == 0) & (thinned == 0))$pop
 }
-Ntp1_ppc <- subset(FullSim, (species == Focal) & (run %in% ppc_runs) & (time == 1))$pop
+Ntp1_ppc <- subset(FullSim, (species == Focal) & (run %in% ppc_runs) &
+                           (time == 1) & (thinned == 0))$pop
 Growth_ppc <- log((Ntp1_ppc + 1)/Nt_ppc)
 
 # Create the data vectors to be passed to rstan for subsequent model fits
-PrelimDataVec <- c("N", "S", "Nt", "Ntp1", "SpMatrix", "env", "tau0", "slab_scale", "slab_df")
-FinalDataVec <- c("N", "S", "Nt", "Ntp1", "SpMatrix", "env", "Inclusion_ij")
+PrelimDataVec <- c("N", "S", "Nt", "Ntp1", "SpMatrix", "env", "Intra", "tau0", "slab_scale", "slab_df")
+FinalDataVec <- c("N", "S", "Nt", "Ntp1", "SpMatrix", "env", "Intra", "Inclusion_ij")
 
 # Set the local values to pass to rstan
-CurData <- subset(FullSim, (species == Focal) & (run <= N) & (time == 0))
-Nt <- CurData$pop
-env <- CurData$run.env
-SpMatrix <- matrix(data = NA, nrow = N, ncol = S)
+FullData <- subset(FullSim, (species == Focal) & (run <= N) & (time == 0) & (thinned == 0))
+ThinData <- subset(FullSim, (species == Focal) & (run <= N) & (time == 0) & (thinned == 1))
+Nt <- c(FullData$pop, ThinData$pop)
+env <- c(FullData$run.env, ThinData$run.env)
+SpMatrix <- matrix(data = NA, nrow = 2*N, ncol = S)
 for(s in 1:S){
-     SpMatrix[,s] <- subset(FullSim, (species == OtherSpecies[s]) & (run <= N) & (time == 0))$pop
+        SpMatrix[1:N,s] <- subset(FullSim, (species == s) & (run <= N) & (time == 0) & (thinned == 0))$pop
+        SpMatrix[(N+1):(2*N),s] <- subset(FullSim, (species == s) & (run <= N) & (time == 0) & (thinned == 1))$pop
 }
-Ntp1 <- subset(FullSim, (species == Focal) & (run <= N) & (time == 1))$pop
+Ntp1 <- c(subset(FullSim, (species == Focal) & (run <= N) & (time == 1) & (thinned == 0))$pop,
+          subset(FullSim, (species == Focal) & (run <= N) & (time == 1) & (thinned == 1))$pop)
+
 
 # Now run the preliminary fit of the model to assess parameter shrinkage
+N <- length(Nt)
 PrelimFit <- stan(file = PrelimStanPath, data = PrelimDataVec, iter = 3000,
-                  chains = 3, init = InitVals)
+                  chains = 3, init = InitVals, control = list(max_treedepth = 15, adapt_delta = 0.99))
 PrelimPosteriors <- extract(PrelimFit)
 FitFileName <- paste("StanFits/optLambda_constAlpha/", FilePrefix, "PrelimFit.rdata", sep = "")
 save(PrelimFit, PrelimPosteriors, file = FitFileName)
 
 # Examine diagnostics and determine if parameters of model run should be updated
 # quartz()
-# pairs(PrelimFit, pars = c("lambda_opt", "lambda_max", "lambda_width", "alpha_generic", "alpha_intra"))
-# hist(summary(PrelimFit)$summary[,"Rhat"])
-# hist(summary(PrelimFit)$summary[,"n_eff"])
-# traceplot(PrelimFit, pars = c("lambda_opt", "lambda_max", "lambda_width", "alpha_generic", "alpha_intra"))
-# traceplot(PrelimFit, pars = "alpha_hat_ij")
-# traceplot(PrelimFit, pars = c("local_shrinkage_ij", "c2", "tau"))
-# acf(PrelimPosteriors$alpha_generic)
-# acf(PrelimPosteriors$alpha_intra)
-# acf(PrelimPosteriors$lambda_opt)
-# acf(PrelimPosteriors$lambda_max)
-# acf(PrelimPosteriors$lambda_width)
+pairs(PrelimFit, pars = c("lambda_opt", "lambda_max", "lambda_width", "alpha_generic", "alpha_intra"))
+hist(summary(PrelimFit)$summary[,"Rhat"])
+hist(summary(PrelimFit)$summary[,"n_eff"])
+traceplot(PrelimFit, pars = c("lambda_opt", "lambda_max", "lambda_width", "alpha_generic", "alpha_intra"))
+traceplot(PrelimFit, pars = "alpha_hat_ij")
+traceplot(PrelimFit, pars = c("local_shrinkage_ij", "c2", "tau"))
+acf(PrelimPosteriors$alpha_generic)
+acf(PrelimPosteriors$alpha_intra)
+acf(PrelimPosteriors$lambda_opt)
+acf(PrelimPosteriors$lambda_max)
+acf(PrelimPosteriors$lambda_width)
 
-########### Posterior Predictive Check
+########### Posterior Predictive Check---------
 PostLength <- length(PrelimPosteriors$alpha_generic)
 # calculate the posterior distributions of the interaction coefficients
 alpha_ij <- matrix(NA, nrow = PostLength, ncol = S)
@@ -150,6 +161,7 @@ IntraDev <- alpha_intra - TrueAlphas[Focal]
 PrelimAlphaEsts[1,S+1] <- mean(IntraDev)
 PrelimAlphaEsts[2:3,S+1] <- HDInterval::hdi(IntraDev)
 
+## Final model ---------
 # Determine the parameters that should be included and run the final model
 plot(PrelimFit, pars = "alpha_hat_ij")
 
@@ -160,8 +172,22 @@ for(s in 1:S){
      if(Ints_ij[1] > 0 | Ints_ij[2] < 0){
           Inclusion_ij[s] <- 1
      }
+     if(s == Focal){
+             Inclusion_ij[s] <- 0
+     }
 }
 Inclusion_ij
+
+# Reset initial conditions to allow faster fitting
+ChainInitials <- list(lambda_max = mean(PrelimPosteriors$lambda_max), 
+                      lambda_opt = mean(PrelimPosteriors$lambda_opt), 
+                      lambda_width = mean(PrelimPosteriors$lambda_width), 
+                      alpha_generic_tilde = mean(PrelimPosteriors$alpha_generic_tilde), 
+                      alpha_hat_ij_tilde = colMeans(PrelimPosteriors$alpha_hat_ij_tilde), 
+                      local_shrinkage_ij = colMeans(PrelimPosteriors$local_shrinkage_ij), 
+                      c2_tilde = mean(PrelimPosteriors$c2_tilde), tau_tilde = mean(PrelimPosteriors$tau_tilde), 
+                      alpha_intra_tilde = mean(PrelimPosteriors$alpha_intra_tilde))
+InitVals <- list(ChainInitials, ChainInitials, ChainInitials)
 
 # Run the final fit of the model
 FinalFit <- stan(file = FinalStanPath, data = FinalDataVec, iter = 3000,
@@ -251,21 +277,11 @@ FinalAlphaEsts[2:3,S+1] <- HDInterval::hdi(IntraDev)
 
 # Plot the results from the ppc
 FigName <- paste("Results/optLambda_constAlpha/", FilePrefix, "ppc.pdf", sep = "")
-Pred_yRange <- c(-2.75, 1)
+Pred_yRange <- c(-2, 2)
 Dev_yRange <- c(-1.75, 1.75)
 xRange <- range(Growth_ppc)
 ppcCol <- "purple"
 pdf(file = FigName, width = 10, height = 6, onefile = FALSE, paper = "special")
-     par(mar = c(5,4,2,2) + 0.1, mfrow = c(2,2))
-     # Upper left: Prelim ppc estimates
-     plot(x = NA, y = NA, xlim = xRange, ylim = Pred_yRange, xlab = "",
-          ylab = "Predicted growth", las = 1)
-     points(x = Growth_ppc, y = PrelimPredVals[1,], pch = 1, col = ppcCol)
-     segments(x0 = Growth_ppc, y0 = PrelimPredVals[2,], x1 = Growth_ppc, y1 = PrelimPredVals[3,], col = ppcCol)
-     abline(a = 0, b = 1, lty = 2)
-     Message <- paste("CI width: ", round(PrelimCIwidth, digits = 2), sep = "")
-     mtext(Message, side = 3, adj = 0.1, line = -1.5, col = ppcCol)
-     mtext("Preliminary model fit", side = 3, line = 0.5)
      # Upper right: Final ppc estimates
      plot(x = NA, y = NA, xlim = xRange, ylim = Pred_yRange, xlab = "",
           ylab = "", las = 1)
@@ -275,20 +291,6 @@ pdf(file = FigName, width = 10, height = 6, onefile = FALSE, paper = "special")
      Message <- paste("CI width: ", round(FinalCIwidth, digits = 2), sep = "")
      mtext(Message, side = 3, adj = 0.1, line = -1.5, col = ppcCol)
      mtext("Final model fit", side = 3, line = 0.5)
-     # Lower left: Prelim ppc deviations
-     plot(x = NA, y = NA, xlim = xRange, ylim = Dev_yRange, xlab = "",
-          ylab = "Deviation", las = 1)
-     points(x = Growth_ppc, y = PrelimDevVals[1,], pch = 1, col = ppcCol)
-     segments(x0 = Growth_ppc, y0 = PrelimDevVals[2,], x1 = Growth_ppc, y1 = PrelimDevVals[3,], col = ppcCol)
-     abline(h = 0, lty = 2)
-     # Lower right: Final ppc deviations
-     plot(x = NA, y = NA, xlim = xRange, ylim = Dev_yRange, xlab = "",
-          ylab = "", las = 1)
-     points(x = Growth_ppc, y = FinalDevVals[1,], pch = 1, col = ppcCol)
-     segments(x0 = Growth_ppc, y0 = FinalDevVals[2,], x1 = Growth_ppc, y1 = FinalDevVals[3,], col = ppcCol)
-     abline(h = 0, lty = 2)
-     
-     mtext("True growth", side = 1, line = -2, outer = TRUE)
 dev.off()
 
 # Plot the accuracy of lambda estimates
@@ -298,26 +300,26 @@ MaxRange <- c(-5, 25)
 WidthRange <- c(-0.5, 0.5)
 FigName <- paste("Results/optLambda_constAlpha/", FilePrefix, "lambdas.pdf", sep = "")
 pdf(file = FigName, width = 10, height = 6, onefile = FALSE, paper = "special")
-     par(mfrow = c(2,3), mar = c(5,4,2,2) + 0.1, oma = c(0, 2, 0, 0))
-     # Upper left: Prelim lambda optimum
-     plot(density(PrelimLambdaDevs[,1]), main = "", xlab = "", 
-          col = LambdaCol, xlim = OptimumRange, las = 1)
-     abline(v = 0, lty = 2)
-     abline(v = hdi(PrelimLambdaDevs[,1]), lty = 3, col = LambdaCol)
-     abline(v = mean(PrelimLambdaDevs[,1]), lty = 1, col = LambdaCol)
-     mtext("Preliminary model fit", side = 2, line = 4.5)
-     # Upper middle: Prelim lambda maximum
-     plot(density(PrelimLambdaDevs[,2]), main = "", xlab = "", 
-          col = LambdaCol, xlim = MaxRange, las = 1)
-     abline(v = 0, lty = 2)
-     abline(v = hdi(PrelimLambdaDevs[,2]), lty = 3, col = LambdaCol)
-     abline(v = mean(PrelimLambdaDevs[,2]), lty = 1, col = LambdaCol)
-     # Upper left: Prelim lambda width
-     plot(density(PrelimLambdaDevs[,3]), main = "", xlab = "", 
-          col = LambdaCol, xlim = WidthRange, las = 1)
-     abline(v = 0, lty = 2)
-     abline(v = hdi(PrelimLambdaDevs[,3]), lty = 3, col = LambdaCol)
-     abline(v = mean(PrelimLambdaDevs[,3]), lty = 1, col = LambdaCol)
+    # par(mfrow = c(2,3), mar = c(5,4,2,2) + 0.1, oma = c(0, 2, 0, 0))
+     # # Upper left: Prelim lambda optimum
+     # plot(density(PrelimLambdaDevs[,1]), main = "", xlab = "", 
+     #      col = LambdaCol, xlim = OptimumRange, las = 1)
+     # abline(v = 0, lty = 2)
+     # abline(v = hdi(PrelimLambdaDevs[,1]), lty = 3, col = LambdaCol)
+     # abline(v = mean(PrelimLambdaDevs[,1]), lty = 1, col = LambdaCol)
+     # mtext("Preliminary model fit", side = 2, line = 4.5)
+     # # Upper middle: Prelim lambda maximum
+     # plot(density(PrelimLambdaDevs[,2]), main = "", xlab = "", 
+     #      col = LambdaCol, xlim = MaxRange, las = 1)
+     # abline(v = 0, lty = 2)
+     # abline(v = hdi(PrelimLambdaDevs[,2]), lty = 3, col = LambdaCol)
+     # abline(v = mean(PrelimLambdaDevs[,2]), lty = 1, col = LambdaCol)
+     # # Upper left: Prelim lambda width
+     # plot(density(PrelimLambdaDevs[,3]), main = "", xlab = "", 
+     #      col = LambdaCol, xlim = WidthRange, las = 1)
+     # abline(v = 0, lty = 2)
+     # abline(v = hdi(PrelimLambdaDevs[,3]), lty = 3, col = LambdaCol)
+     # abline(v = mean(PrelimLambdaDevs[,3]), lty = 1, col = LambdaCol)
      # Lower left: Final lambda optimum
      plot(density(FinalLambdaDevs[,1]), main = "", xlab = "Optimum deviation", 
           col = LambdaCol, xlim = OptimumRange, las = 1)

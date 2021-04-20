@@ -9,7 +9,7 @@ setwd("~/Documents/Work/Current Papers/SparseInteractions/BH_simulations/")
 
 # Set the current sample size and associated prefix for all graph and result
 #    file names
-N <- 10
+N <- 50
 max_N <- 200
 FilePrefix <- paste("N", N, "_", sep = "")
 
@@ -19,8 +19,8 @@ PrelimStanPath <- "StanCode/Prelim_monoLambda_constAlpha.stan"
 FinalStanPath <- "StanCode/Final_monoLambda_constAlpha.stan"
 
 # Load in the appropriate data
-FullSim <- read.csv("Simulations/simulation_perturb2.csv")
-TrueVals <- read.csv("Simulations/parameters_perturb2.csv")
+FullSim <- read.csv("Simulations/simulation_perturb2_const.csv")
+TrueVals <- read.csv("Simulations/parameters_perturb2_const.csv")
 TrueAlphas <- TrueVals$alpha.1
 
 # Load necessary libraries
@@ -194,7 +194,7 @@ InitVals <- list(ChainInitials, ChainInitials, ChainInitials)
 # Run the final fit of the model
 FinalFit <- stan(file = FinalStanPath, data = FinalDataVec, iter = 3000,
                  chains = 3, init = InitVals, control = list(max_treedepth = 15))
-Posteriors <- extract(FinalFit)
+FinalPosteriors <- rstan::extract(FinalFit)
 FitFileName <- paste("StanFits/monoLambda_constAlpha/", FilePrefix, "FinalFit.rdata", sep = "")
 save(FinalFit, FinalPosteriors, Inclusion_ij, file = FitFileName)
 
@@ -209,38 +209,38 @@ which(Inclusion_ij == 1)
 traceplot(FinalFit, pars = "alpha_hat_ij")
 
 # Double check the autocorrelation
-acf(Posteriors$lambdas[,1])
-acf(Posteriors$lambdas[,2])
-acf(Posteriors$alpha_generic[,1])
-acf(Posteriors$alpha_generic[,2])
-acf(Posteriors$alpha_intra[,1])
-acf(Posteriors$alpha_intra[,2])
+acf(FinalPosteriors$lambdas[,1])
+acf(FinalPosteriors$lambdas[,2])
+acf(FinalPosteriors$alpha_generic[,1])
+acf(FinalPosteriors$alpha_generic[,2])
+acf(FinalPosteriors$alpha_intra[,1])
+acf(FinalPosteriors$alpha_intra[,2])
 for(s in 1:S){
         if(Inclusion_ij[s] == 1){
                 quartz()
-                acf(Posteriors$alpha_hat_ij[,s])
+                acf(FinalPosteriors$alpha_hat_ij[,s])
         }
 }
 
 
 ########### Posterior Predictive Check
-PostLength <- length(Posteriors$alpha_generic)
+PostLength <- length(FinalPosteriors$alpha_generic)
 # calculate the posterior distributions of the interaction coefficients
 alpha_ij <- matrix(NA, nrow = PostLength, ncol = S)
 for(s in 1:S){
      if(s == Focal){
-          alpha_ij[,s] <- exp(Posteriors$alpha_intra)
+          alpha_ij[,s] <- exp(FinalPosteriors$alpha_intra)
      }else{
-          alpha_ij[,s] <- exp(Posteriors$alpha_generic + 
-                                      Inclusion_ij[s] * Posteriors$alpha_hat_ij[,s])
+          alpha_ij[,s] <- exp(FinalPosteriors$alpha_generic + 
+                                      Inclusion_ij[s] * FinalPosteriors$alpha_hat_ij[,s])
      }
      
 }
-alpha_intra <- exp(Posteriors$alpha_intra)
+alpha_intra <- exp(FinalPosteriors$alpha_intra)
 # calculate the posterior distributions of lambda_ei
 lambda_ei <- matrix(NA, nrow = PostLength, ncol = N_ppc)
 for(i in 1:N_ppc){
-     lambda_ei[,i] <- exp(Posteriors$lambdas[,1] + Posteriors$lambdas[,2]*env_ppc[i])
+     lambda_ei[,i] <- exp(FinalPosteriors$lambdas[,1] + FinalPosteriors$lambdas[,2]*env_ppc[i])
 }
 
 # use the above quantities to calculate the posterior prediction intervals for the new data
@@ -262,22 +262,22 @@ for(i in 1:N_ppc){
 
 # Calculate the accuracy of parameter estimates from the preliminary fits
 LambdaEsts <- matrix(data = NA, nrow = 3, ncol = 2)
-LambdaEsts[1,1] <- mean(Posteriors$lambdas[,1] - TrueVals$lambda.mean[Focal])
-LambdaEsts[2:3,1] <- hdi(Posteriors$lambdas[,1] - TrueVals$lambda.mean[Focal])
-LambdaEsts[1,2] <- mean(Posteriors$lambdas[,2] - TrueVals$lambda.env[Focal])
-LambdaEsts[2:3,2] <- hdi(Posteriors$lambdas[,2] - TrueVals$lambda.env[Focal])
+LambdaEsts[1,1] <- mean(FinalPosteriors$lambdas[,1] - TrueVals$lambda.mean[Focal])
+LambdaEsts[2:3,1] <- hdi(FinalPosteriors$lambdas[,1] - TrueVals$lambda.mean[Focal])
+LambdaEsts[1,2] <- mean(FinalPosteriors$lambdas[,2] - TrueVals$lambda.env[Focal])
+LambdaEsts[2:3,2] <- hdi(FinalPosteriors$lambdas[,2] - TrueVals$lambda.env[Focal])
 
 # Now calculate the alpha estimates
 AlphaEsts <- matrix(data = NA, nrow = 3, ncol = S)
 for(s in 1:S){
         if(s == Focal){
                 # First the intercept
-                Intercept <- Posteriors$alpha_intra
+                Intercept <- FinalPosteriors$alpha_intra
                 AlphaEsts[1,s] <- mean(Intercept - TrueAlphas[s])
                 AlphaEsts[2:3,s] <- hdi(Intercept - TrueAlphas[s])
         }else{
                 # First the intercept
-                Intercept <- Posteriors$alpha_generic + Posteriors$alpha_hat_ij[,s] * Inclusion_ij[s]
+                Intercept <- FinalPosteriors$alpha_generic + FinalPosteriors$alpha_hat_ij[,s] * Inclusion_ij[s]
                 AlphaEsts[1,s] <- mean(Intercept - TrueAlphas[s])
                 AlphaEsts[2:3,s] <- hdi(Intercept - TrueAlphas[s])
         }
@@ -326,49 +326,49 @@ dev.off()
 # 
 # # Plot the accuracy of lambda estimates
 # # Now create the lambda graph
-# PrelimLambdaIntercept <- PrelimPosteriors$lambdas[,1]
-# PrelimLambdaSlope <- PrelimPosteriors$lambdas[,2]
-# FinalLambdaIntercept <- FinalPosteriors$lambdas[,1]
-# FinalLambdaSlope <- FinalPosteriors$lambdas[,2]
-# TrueLambdaIntercept <- TrueVals$lambda.mean[Focal]
-# TrueLambdaSlope <- TrueVals$lambda.env[Focal]
-# PrelimInterceptDeviation <- PrelimLambdaIntercept - TrueLambdaIntercept
-# PrelimSlopeDeviation <- PrelimLambdaSlope - TrueLambdaSlope
-# FinalInterceptDeviation <- FinalLambdaIntercept - TrueLambdaIntercept
-# FinalSlopeDeviation <- FinalLambdaSlope - TrueLambdaSlope
-# 
-# LambdaCol <- "forestgreen"
-# InterceptRange <- c(-2, 4)
-# SlopeRange <- c(-0.5, 0.5)
-# FigName <- paste("Results/monoLambda_constAlpha/", FilePrefix, "lambdas.pdf", sep = "")
-# pdf(file = FigName, width = 10, height = 6, onefile = FALSE, paper = "special")
-#      par(mfrow = c(2,2), mar = c(5,4,2,2) + 0.1)
-#      # Upper left: Prelim lambda intercept
-#      plot(density(PrelimInterceptDeviation), main = "", xlab = "Intercept deviation", 
-#           col = LambdaCol, xlim = InterceptRange, las = 1)
-#      abline(v = 0, lty = 2)
-#      abline(v = hdi(PrelimInterceptDeviation), lty = 3, col = LambdaCol)
-#      abline(v = mean(PrelimInterceptDeviation), lty = 1, col = LambdaCol)
-#      mtext("Preliminary model fit", side = 3, line = 1)
-#      # Upper right: Final lambda intercept
-#      plot(density(FinalInterceptDeviation), main = "", xlab = "Intercept deviation", 
-#           col = LambdaCol, xlim = InterceptRange, las = 1)
-#      abline(v = 0, lty = 2)
-#      abline(v = hdi(FinalInterceptDeviation), lty = 3, col = LambdaCol)
-#      abline(v = mean(FinalInterceptDeviation), lty = 1, col = LambdaCol)
-#      mtext("Final model fit", side = 3, line = 1)
-#      # Lower left: Prelim lambda slope
-#      plot(density(PrelimSlopeDeviation), main = "", xlab = "Slope deviation", 
-#           col = LambdaCol, xlim = SlopeRange, las = 1)
-#      abline(v = 0, lty = 2)
-#      abline(v = hdi(PrelimSlopeDeviation), lty = 3, col = LambdaCol)
-#      abline(v = mean(PrelimSlopeDeviation), lty = 1, col = LambdaCol)
-#      # Lower right: Final lambda slope
-#      plot(density(FinalSlopeDeviation), main = "", xlab = "Slope deviation", 
-#           col = LambdaCol, xlim = SlopeRange, las = 1)
-#      abline(v = 0, lty = 2)
-#      abline(v = hdi(FinalSlopeDeviation), lty = 3, col = LambdaCol)
-#      abline(v = mean(FinalSlopeDeviation), lty = 1, col = LambdaCol)
+PrelimLambdaIntercept <- PrelimPosteriors$lambdas[,1]
+PrelimLambdaSlope <- PrelimPosteriors$lambdas[,2]
+FinalLambdaIntercept <- FinalPosteriors$lambdas[,1]
+FinalLambdaSlope <- FinalPosteriors$lambdas[,2]
+TrueLambdaIntercept <- TrueVals$lambda.mean[Focal]
+TrueLambdaSlope <- TrueVals$lambda.env[Focal]
+PrelimInterceptDeviation <- PrelimLambdaIntercept - TrueLambdaIntercept
+PrelimSlopeDeviation <- PrelimLambdaSlope - TrueLambdaSlope
+FinalInterceptDeviation <- FinalLambdaIntercept - TrueLambdaIntercept
+FinalSlopeDeviation <- FinalLambdaSlope - TrueLambdaSlope
+
+LambdaCol <- "forestgreen"
+InterceptRange <- c(-2, 4)
+SlopeRange <- c(-0.5, 0.5)
+FigName <- paste("Results/monoLambda_constAlpha/", FilePrefix, "lambdas.pdf", sep = "")
+pdf(file = FigName, width = 10, height = 6, onefile = FALSE, paper = "special")
+     par(mfrow = c(2,2), mar = c(5,4,2,2) + 0.1)
+     # Upper left: Prelim lambda intercept
+     plot(density(PrelimInterceptDeviation), main = "", xlab = "Intercept deviation",
+          col = LambdaCol, xlim = InterceptRange, las = 1)
+     abline(v = 0, lty = 2)
+     abline(v = hdi(PrelimInterceptDeviation), lty = 3, col = LambdaCol)
+     abline(v = mean(PrelimInterceptDeviation), lty = 1, col = LambdaCol)
+     mtext("Preliminary model fit", side = 3, line = 1)
+     # Upper right: Final lambda intercept
+     plot(density(FinalInterceptDeviation), main = "", xlab = "Intercept deviation",
+          col = LambdaCol, xlim = InterceptRange, las = 1)
+     abline(v = 0, lty = 2)
+     abline(v = hdi(FinalInterceptDeviation), lty = 3, col = LambdaCol)
+     abline(v = mean(FinalInterceptDeviation), lty = 1, col = LambdaCol)
+     mtext("Final model fit", side = 3, line = 1)
+     # Lower left: Prelim lambda slope
+     plot(density(PrelimSlopeDeviation), main = "", xlab = "Slope deviation",
+          col = LambdaCol, xlim = SlopeRange, las = 1)
+     abline(v = 0, lty = 2)
+     abline(v = hdi(PrelimSlopeDeviation), lty = 3, col = LambdaCol)
+     abline(v = mean(PrelimSlopeDeviation), lty = 1, col = LambdaCol)
+     # Lower right: Final lambda slope
+     plot(density(FinalSlopeDeviation), main = "", xlab = "Slope deviation",
+          col = LambdaCol, xlim = SlopeRange, las = 1)
+     abline(v = 0, lty = 2)
+     abline(v = hdi(FinalSlopeDeviation), lty = 3, col = LambdaCol)
+     abline(v = mean(FinalSlopeDeviation), lty = 1, col = LambdaCol)
 # dev.off()
 # 
 # # Now plot the alpha estimates versus the true values

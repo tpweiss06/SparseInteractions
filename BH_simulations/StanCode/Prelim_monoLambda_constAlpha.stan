@@ -81,7 +81,7 @@ model{
   }
   for(i in 1:N){
     lambda_ei[i] = exp(lambdas[1] + lambdas[2]*env[i]);
-    interaction_effects[i] = sum(alpha_ij .* SpMatrix[i,]) + exp(alpha_intra) * Nt[i];
+    interaction_effects[i] = sum(alpha_ij .* SpMatrix[i,]);
     
     Ntp1_hat[i] = Nt[i] * lambda_ei[i] / (1 + interaction_effects[i]);
     if(Ntp1_hat[i] > 0){
@@ -89,5 +89,3 @@ model{
     }
   }
 }
-
-
