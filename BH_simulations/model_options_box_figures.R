@@ -1,5 +1,7 @@
 
 library(tidyverse)
+library(patchwork)
+library(HDInterval)
 # monotonic lambda data
 setwd("~/Documents/Work/Current Papers/SparseInteractions/BH_simulations/")
 load("StanFits/monoLambda_constAlpha/N50_FinalFit.rdata")
@@ -39,9 +41,11 @@ lambda.true <- tibble(env.seq, post = as.factor(0), ind = 'true',
                       lambda.slope = rep(lambda.env, each = n))
 lambda.true$lambda.mono <- lambda.true %>% with(exp(lambda.int + lambda.slope*env.seq))
 
-# lambda.ei.all <- left_join(lambda.ei.small, lambda.true)
+# calculate comparisons
+HDInterval::hdi(FinalPosteriors$lambdas[,1], credMass = 0.6)
+HDInterval::hdi(FinalPosteriors$lambdas[,2], credMass = 0.6)
 
-ggplot(lambda.ei.small, aes(x = env.seq, y = lambda.mono)) + 
+p.mono <- ggplot(lambda.ei.small, aes(x = env.seq, y = lambda.mono)) + 
      geom_line(aes(group = post), alpha = 0.02, color = 'grey50') + 
      geom_line(data = lambda.true, color = 'red') +
      geom_line(data = lambda.post, color = 'black', linetype = 'dashed') + 
@@ -51,7 +55,7 @@ ggplot(lambda.ei.small, aes(x = env.seq, y = lambda.mono)) +
 #ggsave(filename = 'Results/Box/monoLambda_constAlpha_N50.pdf', width = 5, height = 5, units = 'in')
 
 ## Same process with optimum lambda
-load("StanFits/optLambda_constAlpha/N200_FinalFit.rdata")
+load("StanFits/optLambda_constAlpha/N50_FinalFit.rdata")
 PostLength <- length(FinalPosteriors$alpha_generic)
 Focal <- 8
 
@@ -85,7 +89,7 @@ lambda.post$lambda.opt <- lambda.post %>%
 
 
 # true value
-TrueVals <- read.csv("Simulations/parameters_perturb_opt.csv")
+TrueVals <- read.csv("Simulations/parameters_perturb_opt_const.csv")
 lambda.max <- with(TrueVals, lambda.max[species == Focal])
 z.env <- with(TrueVals, z.env[species == Focal])
 sigma.env <- with(TrueVals, sigma.env[species == Focal])
@@ -96,8 +100,13 @@ lambda.true <- tibble(env.seq, post = as.factor(0), ind = 'true',
 lambda.true$lambda.opt <- lambda.true %>% 
      with(lambda.max * exp(-((z.env - env.seq)/(2*sigma.env))^2))
 
+# comparisons
+(z.env - post.z.env)/z.env
+(sigma.env - post.sigma.env)/sigma.env
+(lambda.max - post.max)/lambda.max
 
-ggplot(lambda.ei.small, aes(x = env.seq, y = lambda.opt)) + 
+
+p.opt <- ggplot(lambda.ei.small, aes(x = env.seq, y = lambda.opt)) + 
      geom_line(aes(group = post), alpha = 0.02, color = 'grey50') + 
      geom_line(data = lambda.true, color = 'red') +
      geom_line(data = lambda.post, color = 'black', linetype = 'dashed') + 
@@ -105,3 +114,7 @@ ggplot(lambda.ei.small, aes(x = env.seq, y = lambda.opt)) +
      ylab(expression(lambda[ei])) +
      xlab('Environment')
 #ggsave(filename = 'Results/Box/optLambda_constAlpha_N200.pdf', width = 5, height = 5, units = 'in')
+
+p.mono / p.opt
+# ggsave(filename = 'Results/Box/compare_lambdas_N200.pdf', width = 5, height = 8, units = 'in')
+

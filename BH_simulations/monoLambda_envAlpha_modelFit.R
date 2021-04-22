@@ -11,7 +11,7 @@ setwd("~/Documents/Work/Current Papers/SparseInteractions/BH_simulations/")
 
 # Set the current sample size and associated prefix for all graph and result
 #    file names
-N <- 50
+N <- 20
 max_N <- 200
 FilePrefix <- paste("N", N, "_", sep = "")
 
@@ -88,6 +88,8 @@ N <- 2*N
 PrelimFit <- stan(file = PrelimStanPath, data = PrelimDataVec, iter = 3000,
                   chains = 3, init = InitVals)#, control = list(adapt_delta = 0.95))
 PrelimPosteriors <- extract(PrelimFit)
+FitFileName <- paste("StanFits/monoLambda_envAlpha/", FilePrefix, "PrelimFit.rdata", sep = "")
+save(PrelimFit, PrelimPosteriors, file = FitFileName)
 
 # Examine diagnostics and determine if parameters of model run should be updated
 pairs(PrelimFit, pars = c("lambdas", "alpha_generic", "alpha_intra"))

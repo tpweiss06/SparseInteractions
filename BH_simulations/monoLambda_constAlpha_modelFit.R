@@ -9,7 +9,7 @@ setwd("~/Documents/Work/Current Papers/SparseInteractions/BH_simulations/")
 
 # Set the current sample size and associated prefix for all graph and result
 #    file names
-N <- 50
+N <- 10
 max_N <- 200
 FilePrefix <- paste("N", N, "_", sep = "")
 
