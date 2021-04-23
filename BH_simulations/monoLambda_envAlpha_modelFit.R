@@ -10,7 +10,7 @@ setwd("~/Desktop/Wyoming/SparseInteractions/BH_simulations/")
 
 # Set the current sample size and associated prefix for all graph and result
 #    file names
-N <- 50
+N <- 200
 max_N <- 200
 FilePrefix <- paste("N", N, "_", sep = "")
 
@@ -22,9 +22,9 @@ PrelimStanPath <- "StanCode/Prelim_monoLambda_envAlpha.stan"
 FinalStanPath <- "StanCode/Final_monoLambda_envAlpha.stan"
 
 # Load in the appropriate data
-FullSim <- read.csv("Simulations/simulation_perturb4.csv")
+FullSim <- read.csv("Simulations/simulation_perturb2.csv")
 #ThinSim <- read.csv("Simulations/simulation_thinned_5_10.csv")
-TrueVals <- read.csv("Simulations/parameters_perturb4.csv")
+TrueVals <- read.csv("Simulations/parameters_perturb2.csv")
 TrueAlphaMeans <- TrueVals$alpha.1
 TrueAlphaSlopes <- TrueVals$alpha.env.gen + TrueVals$alpha.env.spec
 
@@ -85,7 +85,7 @@ Ntp1 <- c(subset(FullSim, (species == Focal) & (run <= N) & (time == 1) & (thinn
 # Now run the preliminary fit of the model to assess parameter shrinkage
 N <- 2*N
 PrelimFit <- stan(file = PrelimStanPath, data = PrelimDataVec, iter = 3000,
-                  chains = 3, init = InitVals)#, control = list(adapt_delta = 0.95))
+                  chains = 3, init = InitVals, control = list(adapt_delta = 0.95))
 PrelimPosteriors <- extract(PrelimFit)
 
 # Examine diagnostics and determine if parameters of model run should be updated
