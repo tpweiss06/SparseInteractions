@@ -6,11 +6,16 @@
 
 # Species 10 in test 5 is what we're going with!!
 
-setwd("~/Desktop/Wyoming/SparseInteractions/BH_simulations/")
+#setwd("~/Desktop/Wyoming/SparseInteractions/BH_simulations/")
+setwd("~/Documents/Work/Current Papers/SparseInteractions/BH_simulations/")
 
 # Set the current sample size and associated prefix for all graph and result
 #    file names
+<<<<<<< HEAD
 N <- 200
+=======
+N <- 20
+>>>>>>> 8490ca92486fa5fa0b64c56ecdc631f6160a42c0
 max_N <- 200
 FilePrefix <- paste("N", N, "_", sep = "")
 
@@ -41,7 +46,7 @@ Intra <- rep(0, S)
 Intra[Focal] <- 1
 tau0 <- 2
 slab_df <- 2*S - 1
-slab_scale <- 1 #1 #0.25 #log(2) #0.25 # 1 seems to work best, but have Chhaya remove the central values to really emphasize differences in test 2
+slab_scale <- 1 
 
 # Set initial values to avoid initial problems with the random number generator
 ChainInitials <- list(lambdas = c(TrueVals$lambda.mean[Focal], TrueVals$lambda.env[Focal]), 
@@ -87,6 +92,8 @@ N <- 2*N
 PrelimFit <- stan(file = PrelimStanPath, data = PrelimDataVec, iter = 3000,
                   chains = 3, init = InitVals, control = list(adapt_delta = 0.95))
 PrelimPosteriors <- extract(PrelimFit)
+FitFileName <- paste("StanFits/monoLambda_envAlpha/", FilePrefix, "PrelimFit.rdata", sep = "")
+save(PrelimFit, PrelimPosteriors, file = FitFileName)
 
 # Examine diagnostics and determine if parameters of model run should be updated
 pairs(PrelimFit, pars = c("lambdas", "alpha_generic", "alpha_intra"))

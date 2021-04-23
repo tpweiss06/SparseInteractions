@@ -8,6 +8,7 @@ data{
   int<lower = 0> Ntp1[N];
   matrix[N,S] SpMatrix;
   vector[N] env;
+  int<lower = 0> Intra[S];
   real tau0; 		// determines the scale of the global shrinkage parameter (tau)
   real slab_scale;	// scale for significant alpha_sp values
   real slab_df;		// effective degrees of freedom for significant alpha_sp values
@@ -76,11 +77,11 @@ model{
 
   // implement the biological model
   for(s in 1:S){
-        alpha_ij[s] = exp(alpha_generic + alpha_hat_ij[s]);
+        alpha_ij[s] = exp((1-Intra[s]) * alpha_generic + Intra[s] * alpha_intra + (1-Intra[s]) * alpha_hat_ij[s]);
   }
   for(i in 1:N){
     lambda_ei[i] = exp(lambdas[1] + lambdas[2]*env[i]);
-    interaction_effects[i] = sum(alpha_ij .* SpMatrix[i,]) + exp(alpha_intra) * Nt[i];
+    interaction_effects[i] = sum(alpha_ij .* SpMatrix[i,]);
     
     Ntp1_hat[i] = Nt[i] * lambda_ei[i] / (1 + interaction_effects[i]);
     if(Ntp1_hat[i] > 0){
@@ -88,5 +89,3 @@ model{
     }
   }
 }
-
-
