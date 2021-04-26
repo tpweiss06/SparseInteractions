@@ -48,10 +48,10 @@ for(i in 1:3){
 #       interspecific alpha terms estimated by the model will be open circles.
 Focal <- 10
 S <- 15
-ppc_xRange <- range(Growth_ppc)
-ppc_yRange <- c(-3.5, 1)
-param_xRange <- c(-7.5, 7.5)
-param_yRange <- c(0, 5.65)
+#ppc_xRange <- range(Growth_ppc)
+ppc_Range <- c(-1.75, 3)
+param_xRange <- c(-5, 5)
+param_yRange <- c(0, 6)
 
 # Determine the maximum number of species with non-generic alpha terms
 AllNonGeneric <- union(which(InterceptInclusion[[3]] == 1), which(SlopeInclusion[[3]] == 1))
@@ -74,59 +74,36 @@ InterceptOffset <- 0.55
 SlopeOffset <- 0.45
 Generic_y <- c(InterceptOffset, SlopeOffset)
 NonGeneric_y <- matrix(data = NA, nrow = NumNonGeneric, ncol = 2)
-for(i in 2:(NumNonGeneric+1)){
-     NonGeneric_y[i-1,1] <- 0.5*i + InterceptOffset
-     NonGeneric_y[i-1,2] <- 0.5*i + SlopeOffset
-}
+NonGeneric_y[,1] <- c(1.35, 1.95, 2.55, 3.15, 3.75)
+NonGeneric_y[,2] <- c(1.25, 1.85, 2.45, 3.05, 3.65)
+#for(i in 2:(NumNonGeneric+1)){
+#     NonGeneric_y[i-1,1] <- 0.5*i + InterceptOffset
+#     NonGeneric_y[i-1,2] <- 0.5*i + SlopeOffset
+#}
 Intra_y <- c(4 + InterceptOffset, 4 + SlopeOffset)
 Lambda_y <- c(5 + InterceptOffset, 5 + SlopeOffset)
 
-# Lambda_y <- c(15 + InterceptOffset, 15 + SlopeOffset)
-# Intra_y <- c(14 + InterceptOffset, 14 + SlopeOffset)
-# NumBoth <- length(BothNonGeneric)
-# Both_y <- matrix(data = NA, nrow = NumBoth, ncol = 2)
-# for(i in 1:NumBoth){
-#         Both_y[i,1] <- 14-i + InterceptOffset
-#         Both_y[i,2] <- 14-i + SlopeOffset
-# }
-# NumIntercept <- length(OnlyIntercept)
-# Intercept_y <- matrix(data = NA, nrow = NumIntercept, ncol = 2)
-# for(i in 1:NumIntercept){
-#         Intercept_y[i,1] <-  14 - NumBoth - i + InterceptOffset
-#         Intercept_y[i,2] <-  14 - NumBoth - i + SlopeOffset
-# }
-# NumSlope <- length(OnlySlope)
-# Slope_y <- matrix(data = NA, nrow = NumSlope, ncol = 2)
-# for(i in 1:NumSlope){
-#         Slope_y[i,1] <-  14 - NumBoth - NumIntercept - i + InterceptOffset
-#         Slope_y[i,2] <-  14 - NumBoth - NumIntercept - i + SlopeOffset
-# }
-# NumGeneric <- length(BothGeneric)
-# Generic_y <- matrix(data = NA, nrow = NumGeneric, ncol = 2)
-# for(i in 1:NumGeneric){
-#         Generic_y[i,1] <-  14 - NumBoth - NumIntercept - NumSlope - i + InterceptOffset
-#         Generic_y[i,2] <-  14 - NumBoth - NumIntercept - NumSlope - i + SlopeOffset
-# }
-
 # Define the points for y axis labels
 GenericLab_y <- 0.5
-GenericLab <- expression(paste("Generic ", alpha["e,i,j"], " terms", sep = ""))
+GenericLab <- expression(paste("Generic ", alpha["e,i,j"], sep = ""))
+#GenericLab <- expression(paste("Generic ", alpha["inter"], sep = ""))
 IntraLab_y <- 4.5
-IntraLab <- expression(paste(alpha["e,i,i"], " terms", sep = ""))
+IntraLab <- expression(paste(alpha["e,i,i"], sep = ""))
+#IntraLab <- expression(paste(alpha["intra"], sep = ""))
 LambdaLab_y <- 5.5
-LambdaLab <- expression(paste(lambda["e,i"], " terms", sep = ""))
-NonGenericLab_y1 <- 2.75
-NonGenericLab_y2 <- 2.25
-NonGenericLab1 <- "Species specific"
-NonGenericLab2 <- expression(paste(alpha["e,i,j"], " terms", sep = ""))
-     
-# BothGenericLab <- (28 - 2*NumBoth - 2*NumIntercept - 2*NumSlope - NumGeneric) / 2
-# OnlySlopeLab <- (28 - 2*NumBoth - 2*NumIntercept - NumSlope) / 2
-# OnlyInterceptLab <- (28 - 2*NumBoth - NumIntercept) / 2
-# BothNonGenericLab <- (28 - NumBoth) / 2
-# IntraLab <- 14.5
-# LambdaLab <- 15.5
+LambdaLab <- expression(paste(lambda["e,i"], sep = ""))
+NonGenericLab_y1 <- 2.95
+NonGenericLab_y2 <- 2.45
+NonGenericLab_y3 <- 1.95
+NonGenericLab1 <- "Species"
+NonGenericLab2 <- "specific"
+NonGenericLab3 <- expression(paste(alpha["e,i,j"], sep = ""))
+#NonGenericLab3 <- expression(paste(alpha["inter"], sep = ""))
 
+# Make the letters for the subpanels
+Letters <- matrix(c(expression(bold("a")), expression(bold("b")), expression(bold("c")),
+                    expression(bold("d")), expression(bold("e")), expression(bold("f"))),
+                    nrow = 3, ncol = 2, byrow = TRUE)
 
 FigName <- "Results/monoLambda_envAlpha/SimResults.pdf"
 pdf(file = FigName, width = 7, height = 8, onefile = FALSE, paper = "special")
@@ -138,8 +115,15 @@ pdf(file = FigName, width = 7, height = 8, onefile = FALSE, paper = "special")
           axis(side = 1, at = -7:7, tcl = -0.5)
           axis(side = 1, at = seq(-8, 8, by = 0.5), tcl = -0.25, labels = FALSE)
           # Add boxes for intraspecifc and generic alpha components
-          rect(xleft = -7.5, ybottom = 5, xright = 7.5, ytop = 6, col = "grey", border = NA, xpd = NA)
-          rect(xleft = -7.5, ybottom = 1, xright = 7.5, ytop = 4, col = "grey", border = NA, xpd = NA)
+          rect(xleft = -5, ybottom = 5, xright = 5, ytop = 6, col = "grey", border = NA, xpd = NA)
+          #rect(xleft = -5, ybottom = 1, xright = 5, ytop = 4, col = "grey", border = NA, xpd = NA)
+          
+          rect(xleft = -5, ybottom = 1, xright = 5, ytop = 1.6, col = "grey", border = NA, xpd = NA)
+          rect(xleft = -5, ybottom = 1.6, xright = 5, ytop = 2.2, col = "lightgrey", border = NA, xpd = NA)
+          rect(xleft = -5, ybottom = 2.2, xright = 5, ytop = 2.8, col = "grey", border = NA, xpd = NA)
+          rect(xleft = -5, ybottom = 2.8, xright = 5, ytop = 3.4, col = "lightgrey", border = NA, xpd = NA)
+          rect(xleft = -5, ybottom = 3.4, xright = 5, ytop = 4, col = "grey", border = NA, xpd = NA)
+          
           # Add points for the generic alpha terms
           points(x = GenericDeviations[[i]][1,1], Generic_y[1], pch = InterceptPoints, col = InterceptCol)
           points(x = GenericDeviations[[i]][2,1], Generic_y[2], pch = SlopePoints, col = SlopeCol)
@@ -162,7 +146,7 @@ pdf(file = FigName, width = 7, height = 8, onefile = FALSE, paper = "special")
                              x1 = Alphas[[i]][3,2,AllNonGeneric[j]], y1 = NonGeneric_y[j,2], col = SlopeCol)
                }
           }
-          # Add points for the ntraspecific alpha terms
+          # Add points for the intraspecific alpha terms
           points(x = Alphas[[i]][1,1,Focal], Intra_y[1], pch = InterceptPoints, col = InterceptCol)
           points(x = Alphas[[i]][1,2,Focal], Intra_y[2], pch = SlopePoints, col = SlopeCol)
           segments(x0 = Alphas[[i]][2,1,Focal], x1 = Alphas[[i]][3,1,Focal], y0 = Intra_y[1], y1 = Intra_y[1], col = InterceptCol)
@@ -173,26 +157,33 @@ pdf(file = FigName, width = 7, height = 8, onefile = FALSE, paper = "special")
           segments(x0 = Lambdas[[i]][2,1], x1 = Lambdas[[i]][3,1], y0 = Lambda_y[1], y1 = Lambda_y[1], col = InterceptCol)
           segments(x0 = Lambdas[[i]][2,2], x1 = Lambdas[[i]][3,2], y0 = Lambda_y[2], y1 = Lambda_y[2], col = SlopeCol)
           # Add the labels
-          text(x = 4, y = NonGenericLab_y1, labels = NonGenericLab1, xpd = NA)
-          text(x = 4, y = NonGenericLab_y2, labels = NonGenericLab2, xpd = NA)
-          text(x = 4, y = GenericLab_y, labels = GenericLab, xpd = NA)
-          text(x = 4, y = IntraLab_y, labels = IntraLab, xpd = NA)
-          text(x = 4, y = LambdaLab_y, labels = LambdaLab, xpd = NA)
-          abline(v = 0, lty = 2)
+          text(x = -3.5, y = NonGenericLab_y1, labels = NonGenericLab1, xpd = NA, cex = 1.5)
+          text(x = -3.5, y = NonGenericLab_y2, labels = NonGenericLab2, xpd = NA, cex = 1.5)
+          text(x = -3.5, y = NonGenericLab_y3, labels = NonGenericLab3, xpd = NA, cex = 1.5)
+          text(x = 3, y = GenericLab_y, labels = GenericLab, xpd = NA, cex = 1.5)
+          text(x = 3, y = IntraLab_y, labels = IntraLab, xpd = NA, cex = 1.5)
+          text(x = 3, y = LambdaLab_y, labels = LambdaLab, xpd = NA, cex = 1.5)
+          segments(x0 = 0, y0 = 0, x1 = 0, y1 = 6, col = "black", lty = 2)
+          #abline(v = 0, lty = 2)
           if(i == 3){
                mtext("Parameter deviations", side = 1, line = 2.5)
           }
           if(i == 1){
-               legend(x = -5, y = 7, xpd = NA, bty = "n", horiz = TRUE, legend = c("Intercept", "", "Slope"),
-                      pch = c(InterceptPoints, NA, SlopePoints), col = c(InterceptCol, NA, SlopeCol))
+               legend(x = -4.5, y = 7.5, xpd = NA, bty = "n", horiz = TRUE, legend = c("Intercept"),
+                      pch = c(InterceptPoints), col = c(InterceptCol), cex = 1.5)
+               legend(x = 0.75, y = 7.5, xpd = NA, bty = "n", horiz = TRUE, legend = c("Slope"),
+                      pch = c(SlopePoints), col = c(SlopeCol), cex = 1.5)
           }
+          # Add the letters to the figure
+          text(x = 0.95*param_xRange[1], y = 0.95*param_yRange[2], 
+               labels = Letters[i,1], cex = 1.5)
      
           # Now plot the posterior predictive values
-          plot(x = NA, y = NA, xlim = ppc_xRange, ylim = ppc_yRange, xlab = "",
+          plot(x = NA, y = NA, xlim = ppc_Range, ylim = ppc_Range, xlab = "",
                ylab = "", las = 1)
           mtext("Predicted growth", side = 2, line = 2.5)
-          axis(1, at = seq(-4, 1, by = 0.25), tcl = -0.25, labels = FALSE)
-          axis(2, at = seq(-4, 1.5, by = 0.25), tcl = -0.25, labels = FALSE)
+          axis(1, at = seq(-2, 3, by = 0.25), tcl = -0.25, labels = FALSE)
+          axis(2, at = seq(-2, 3, by = 0.25), tcl = -0.25, labels = FALSE)
           points(x = Growth_ppc, y = ppcPreds[[i]][1,], pch = 1, col = ppcCol)
           segments(x0 = Growth_ppc, y0 = ppcPreds[[i]][2,], 
                    x1 = Growth_ppc, y1 = ppcPreds[[i]][3,], col = ppcCol)
@@ -200,115 +191,10 @@ pdf(file = FigName, width = 7, height = 8, onefile = FALSE, paper = "special")
           if(i == 3){
                mtext("True growth", side = 1, line = 2.5)
           }
+          # Add the letters to the figure
+          text(x = 0.95*ppc_Range[1], y = 0.95*ppc_Range[2], 
+               labels = Letters[i,2], cex = 1.5)
      }
 dev.off()
 
 
-# FigName <- "Results/monoLambda_envAlpha/SimResults.pdf"
-# pdf(file = FigName, width = 7, height = 8, onefile = FALSE, paper = "special")
-#         par(mfrow = c(3,2), mar = c(2, 2.5, 2, 2.5), oma = c(2, 0, 0, 0))
-#         for(i in 1:3){
-#                 # First define the point types for interspecific interactions
-#                 InterceptPoints <- rep(1, S)
-#                 SlopePoints <- rep(1, S)
-#                 InterceptPoints[which(InterceptInclusion[[i]] == 1)] <- 16
-#                 SlopePoints[which(SlopeInclusion[[i]] == 1)] <- 16
-#                 
-#                 # Plot the parameters
-#                 plot(NA, NA, xlim = param_xRange, ylim = param_yRange, xlab = "",
-#                      ylab = "", axes = FALSE)
-#                 axis(side = 1, at = -3:3, tcl = -0.5)
-#                 axis(side = 1, at = seq(-3, 3, by = 0.25), tcl = -0.25, labels = FALSE)
-#                 # Add boxes for intraspecifc, only intercept, and both generic
-#                 rect(xleft = -3, ybottom = 14, xright = 3, ytop = 15, col = "grey",
-#                      border = NA, xpd = NA)
-#                 rect(xleft = -3, ybottom = 14 - NumBoth - NumIntercept, xright = 3, 
-#                      ytop = 14 - NumBoth, col = "grey", border = NA, xpd = NA)
-#                 rect(xleft = -3, ybottom = 14 - NumBoth - NumIntercept - NumSlope - NumGeneric,
-#                      xright = 3, ytop = 14 - NumBoth - NumIntercept - NumSlope, 
-#                      col = "grey", border = NA, xpd = NA)
-#                 # Both generic
-#                 points(x = Alphas[[i]][1,1,BothGeneric], Generic_y[,1], 
-#                        pch = InterceptPoints[BothGeneric], col = InterceptCol)
-#                 points(x = Alphas[[i]][1,2,BothGeneric], Generic_y[,2],
-#                        pch = SlopePoints[BothGeneric], col = SlopeCol)
-#                 segments(x0 = Alphas[[i]][2,1,BothGeneric], x1 = Alphas[[i]][3,1,BothGeneric],
-#                          y0 = Generic_y[,1], y1 = Generic_y[,1], col = InterceptCol)
-#                 segments(x0 = Alphas[[i]][2,2,BothGeneric], x1 = Alphas[[i]][3,2,BothGeneric],
-#                          y0 = Generic_y[,2], y1 = Generic_y[,2], col = SlopeCol)
-#                 # Only slope
-#                 points(x = Alphas[[i]][1,1,OnlySlope], Slope_y[,1], 
-#                        pch = InterceptPoints[OnlySlope], col = InterceptCol)
-#                 points(x = Alphas[[i]][1,2,OnlySlope], Slope_y[,2], 
-#                        pch = SlopePoints[OnlySlope], col = SlopeCol)
-#                 segments(x0 = Alphas[[i]][2,1,OnlySlope], x1 = Alphas[[i]][3,1,OnlySlope],
-#                          y0 = Slope_y[,1], y1 = Slope_y[,1], col = InterceptCol)
-#                 segments(x0 = Alphas[[i]][2,2,OnlySlope], x1 = Alphas[[i]][3,2,OnlySlope],
-#                          y0 = Slope_y[,2], y1 = Slope_y[,2], col = SlopeCol)
-#                 # Only intercept
-#                 points(x = Alphas[[i]][1,1,OnlyIntercept], Intercept_y[,1], 
-#                        pch = InterceptPoints[OnlyIntercept], col = InterceptCol)
-#                 points(x = Alphas[[i]][1,2,OnlyIntercept], Intercept_y[,2], 
-#                        pch = SlopePoints[OnlyIntercept], col = SlopeCol)
-#                 segments(x0 = Alphas[[i]][2,1,OnlyIntercept], x1 = Alphas[[i]][3,1,OnlyIntercept],
-#                          y0 = Intercept_y[,1], y1 = Intercept_y[,1], col = InterceptCol)
-#                 segments(x0 = Alphas[[i]][2,2,OnlyIntercept], x1 = Alphas[[i]][3,2,OnlyIntercept],
-#                          y0 = Intercept_y[,2], y1 = Intercept_y[,2], col = SlopeCol)
-#                 # Both non-generic
-#                 points(x = Alphas[[i]][1,1,BothNonGeneric], Both_y[,1], 
-#                        pch = InterceptPoints[BothNonGeneric], col = InterceptCol)
-#                 points(x = Alphas[[i]][1,2,BothNonGeneric], Both_y[,2], 
-#                        pch = SlopePoints[BothNonGeneric], col = SlopeCol)
-#                 segments(x0 = Alphas[[i]][2,1,BothNonGeneric], x1 = Alphas[[i]][3,1,BothNonGeneric],
-#                          y0 = Both_y[,1], y1 = Both_y[,1], col = InterceptCol)
-#                 segments(x0 = Alphas[[i]][2,2,BothNonGeneric], x1 = Alphas[[i]][3,2,BothNonGeneric],
-#                          y0 = Both_y[,2], y1 = Both_y[,2], col = SlopeCol)
-#                 # Intraspecific
-#                 points(x = Alphas[[i]][1,1,Focal], Intra_y[1], 
-#                        pch = IntraPoints, col = InterceptCol)
-#                 points(x = Alphas[[i]][1,2,Focal], Intra_y[2], 
-#                        pch = IntraPoints, col = SlopeCol)
-#                 segments(x0 = Alphas[[i]][2,1,Focal], x1 = Alphas[[i]][3,1,Focal],
-#                          y0 = Intra_y[1], y1 = Intra_y[1], col = InterceptCol)
-#                 segments(x0 = Alphas[[i]][2,2,Focal], x1 = Alphas[[i]][3,2,Focal],
-#                          y0 = Intra_y[2], y1 = Intra_y[2], col = SlopeCol)
-#                 # Lambda
-#                 points(x = Lambdas[[i]][1,1], Lambda_y[1], 
-#                        pch = LambdaPoints, col = InterceptCol)
-#                 points(x = Lambdas[[i]][1,2], Lambda_y[2], 
-#                        pch = LambdaPoints, col = SlopeCol)
-#                 segments(x0 = Lambdas[[i]][2,1], x1 = Lambdas[[i]][3,1],
-#                          y0 = Lambda_y[1], y1 = Lambda_y[1], col = InterceptCol)
-#                 segments(x0 = Lambdas[[i]][2,2], x1 = Lambdas[[i]][3,2],
-#                          y0 = Lambda_y[2], y1 = Lambda_y[2], col = SlopeCol)
-#                 # Add the labels
-#                 text(x = -2, y = BothGenericLab, labels = "Fully generic", xpd = NA)
-#                 text(x = -2, y = OnlySlopeLab, labels = "Non-generic \n slope", xpd = NA)
-#                 text(x = -2, y = OnlyInterceptLab, labels = "Non-generic \n intercept", xpd = NA)
-#                 text(x = -2, y = BothNonGenericLab, labels = "Fully \n non-generic", xpd = NA)
-#                 text(x = -2, y = IntraLab, labels = "Intraspecific", xpd = NA)
-#                 text(x = -2, y = LambdaLab, labels = "Lambda", xpd = NA)
-#                 abline(v = 0, lty = 2)
-#                 if(i == 3){
-#                         mtext("Parameter deviations", side = 1, line = 2.5)
-#                 }
-#                 
-#                 # Now plot the posterior predictive values
-#                 plot(x = NA, y = NA, xlim = ppc_xRange, ylim = ppc_yRange, xlab = "",
-#                      ylab = "", las = 1)
-#                 mtext("Predicted growth", side = 2, line = 2.5)
-#                 axis(1, at = seq(-2, 1, by = 0.25), tcl = -0.25, labels = FALSE)
-#                 axis(2, at = seq(-3, 1.5, by = 0.25), tcl = -0.25, labels = FALSE)
-#                 points(x = Growth_ppc, y = ppcPreds[[i]][1,], pch = 1, col = ppcCol)
-#                 segments(x0 = Growth_ppc, y0 = ppcPreds[[i]][2,], 
-#                          x1 = Growth_ppc, y1 = ppcPreds[[i]][3,], col = ppcCol)
-#                 abline(a = 0, b = 1, lty = 2)
-#                 if(i == 3){
-#                         mtext("True growth", side = 1, line = 2.5)
-#                 }
-#         }
-# dev.off()
-# 
-# 
-# 
-# 

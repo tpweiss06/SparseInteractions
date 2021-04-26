@@ -55,11 +55,13 @@ IntraPlot <- array(NA, dim = c(2,3,EnvLength))
 
 # Now set the species that deviate from the generic
 SpecificPlot <- array(NA, dim = c(2,2, 3, EnvLength))
+# Hyalosperma glutinosum and Schoenus nanus for phosphorous
 PhosLegend <- c("Generic", "Intraspecific",
-               expression(paste(italic("Hyalosperma glutinosum"), " (Perenjori)", sep = "")), 
-               expression(paste(italic("Schoenus nanus"), " (Bendering)", sep = "")))
+               expression(paste(italic("H. glutinosum"), " (Perenjori)", sep = "")), 
+               expression(paste(italic("S. nanus"), " (Bendering)", sep = "")))
+# Hypochaeris glabra for shade
 ShadeLegend <- c("Generic", "Intraspecific",
-               expression(paste(italic("Hypochaeris glabra"), " (Bendering)", sep = "")))
+               expression(paste(italic("H. glabra"), " (Bendering)", sep = "")))
 
 
 for(i in 1:EnvLength){
@@ -114,8 +116,10 @@ pdf(file = FigName, width = 8, height = 6, onefile = FALSE, paper = "special")
           lines(x = PlotPhos, y = LambdaPlotVals[1,i,,2], col = LambdaCols[i], lty = 2)
           lines(x = PlotPhos, y = LambdaPlotVals[1,i,,3], col = LambdaCols[i], lty = 2)
      }
-     legend("top", legend = c("Bendering", "Perenjori"), lty = 1, col = LambdaCols,
+     legend("topright", legend = c("Bendering", "Perenjori"), lty = 1, col = LambdaCols,
             bty = "n")
+     text(x = 0.95*PhosRange[1], y = 0.95*LambdaRange[2], 
+          labels = expression(bold("a")), cex = 1.5)
      
      # Lambda results for canopy cover
      plot(NA, NA, xlim = ShadeRange, ylim = LambdaRange, main = "", xlab = "", ylab = "",
@@ -127,8 +131,10 @@ pdf(file = FigName, width = 8, height = 6, onefile = FALSE, paper = "special")
           lines(x = PlotShade, y = LambdaPlotVals[2,i,,2], col = LambdaCols[i], lty = 2)
           lines(x = PlotShade, y = LambdaPlotVals[2,i,,3], col = LambdaCols[i], lty = 2)
      }
-     legend("top", legend = c("Bendering", "Perenjori"), lty = 1, col = LambdaCols,
+     legend("topright", legend = c("Bendering", "Perenjori"), lty = 1, col = LambdaCols,
             bty = "n")
+     text(x = 0.95*ShadeRange[1], y = 0.95*LambdaRange[2], 
+          labels = expression(bold("b")), cex = 1.5)
      
      # Alpha results for phosphorous
      plot(NA, NA, xlim = PhosRange, ylim = AlphaRange, main = "", xlab = "Standardized phosphorous", 
@@ -150,8 +156,10 @@ pdf(file = FigName, width = 8, height = 6, onefile = FALSE, paper = "special")
           #lines(x = PlotPhos, y = SpecificPlot[1,i,2,], lty = 2, col = AlphaCols[i])
           #lines(x = PlotPhos, y = SpecificPlot[1,i,3,], lty = 2, col = AlphaCols[i])
      }
-     legend("topleft", legend = PhosLegend, lty = 1, lwd = 1.5, col = c("black", IntraCol, AlphaCols),
+     legend("topright", legend = PhosLegend, lty = 1, lwd = 1.5, col = c("black", IntraCol, AlphaCols),
             bty = "n")
+     text(x = 0.95*PhosRange[1], y = 0.95*AlphaRange[2], 
+          labels = expression(bold("c")), cex = 1.5)
      
      # Alpha results for canopy cover
      plot(NA, NA, xlim = ShadeRange, ylim = AlphaRange, main = "", xlab = "Standardized canopy cover", 
@@ -171,9 +179,10 @@ pdf(file = FigName, width = 8, height = 6, onefile = FALSE, paper = "special")
      lines(x = PlotShade, y = SpecificPlot[2,1,1,], lwd = 1.5, col = AlphaCols[1])
      #lines(x = PlotShade, y = SpecificPlot[2,1,2,], lty = 2, col = AlphaCols[1])
      #lines(x = PlotShade, y = SpecificPlot[2,1,3,], lty = 2, col = AlphaCols[1])
-     
      legend("topright", legend = ShadeLegend, lty = 1, lwd = 1.5, col = c("black", IntraCol, AlphaCols),
             bty = "n", inset = -0.02)
+     text(x = 0.95*ShadeRange[1], y = 0.95*AlphaRange[2], 
+          labels = expression(bold("d")), cex = 1.5)
 dev.off()
 
 

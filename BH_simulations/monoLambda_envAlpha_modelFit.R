@@ -6,16 +6,14 @@
 
 # Species 10 in test 5 is what we're going with!!
 
-#setwd("~/Desktop/Wyoming/SparseInteractions/BH_simulations/")
-setwd("~/Documents/Work/Current Papers/SparseInteractions/BH_simulations/")
+setwd("~/Desktop/Wyoming/SparseInteractions/BH_simulations/")
+#setwd("~/Documents/Work/Current Papers/SparseInteractions/BH_simulations/")
 
 # Set the current sample size and associated prefix for all graph and result
 #    file names
-<<<<<<< HEAD
+
 N <- 200
-=======
-N <- 20
->>>>>>> 8490ca92486fa5fa0b64c56ecdc631f6160a42c0
+
 max_N <- 200
 FilePrefix <- paste("N", N, "_", sep = "")
 
