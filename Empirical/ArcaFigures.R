@@ -99,8 +99,10 @@ pdf(file = FigName, width = 8, height = 6, onefile = FALSE, paper = "special")
           lines(x = PlotPhos, y = LambdaPlotVals[1,i,,2], col = LambdaCols[i], lty = 2)
           lines(x = PlotPhos, y = LambdaPlotVals[1,i,,3], col = LambdaCols[i], lty = 2)
      }
-     legend("topleft", legend = c("Bendering", "Perenjori"), lty = 1, col = LambdaCols,
+     legend("topright", legend = c("Bendering", "Perenjori"), lty = 1, col = LambdaCols,
             bty = "n")
+     text(x = 0.95*PhosRange[1], y = 0.95*LambdaRange[2], 
+          labels = expression(bold("a")), cex = 1.5)
 
      # Lambda results for canopy cover
      plot(NA, NA, xlim = ShadeRange, ylim = LambdaRange, main = "", xlab = "", ylab = "",
@@ -114,6 +116,8 @@ pdf(file = FigName, width = 8, height = 6, onefile = FALSE, paper = "special")
      }
      legend("topright", legend = c("Bendering", "Perenjori"), lty = 1, col = LambdaCols,
             bty = "n")
+     text(x = 0.95*ShadeRange[1], y = 0.95*LambdaRange[2], 
+          labels = expression(bold("b")), cex = 1.5)
 
      # Alpha results for phosphorous
      plot(NA, NA, xlim = PhosRange, ylim = AlphaRange, main = "", xlab = "Standardized phosphorous", 
@@ -129,8 +133,10 @@ pdf(file = FigName, width = 8, height = 6, onefile = FALSE, paper = "special")
      lines(x = PlotPhos, y = IntraPlot[1,1,], lwd = 1.5, col = IntraCol)
      lines(x = PlotPhos, y = IntraPlot[1,2,], lty = 2, col = IntraCol)
      lines(x = PlotPhos, y = IntraPlot[1,3,], lty = 2, col = IntraCol)
-     legend("topleft", legend = PhosLegend, lty = 1, lwd = 1.5, col = c("black", IntraCol, AlphaCols),
+     legend("top", legend = PhosLegend, lty = 1, lwd = 1.5, col = c("black", IntraCol, AlphaCols),
             bty = "n")
+     text(x = 0.95*PhosRange[1], y = 0.95*AlphaRange[2], 
+          labels = expression(bold("c")), cex = 1.5)
 
      # Alpha results for canopy cover
      plot(NA, NA, xlim = ShadeRange, ylim = AlphaRange, main = "", xlab = "Standardized canopy cover", 
@@ -146,7 +152,8 @@ pdf(file = FigName, width = 8, height = 6, onefile = FALSE, paper = "special")
      lines(x = PlotShade, y = IntraPlot[2,1,], lwd = 1.5, col = IntraCol)
      lines(x = PlotShade, y = IntraPlot[2,2,], lty = 2, col = IntraCol)
      lines(x = PlotShade, y = IntraPlot[2,3,], lty = 2, col = IntraCol)
-
      legend("topright", legend = ShadeLegend, lty = 1, lwd = 1.5, col = c("black", IntraCol, AlphaCols),
             bty = "n")
+     text(x = 0.95*ShadeRange[1], y = 0.95*AlphaRange[2], 
+          labels = expression(bold("d")), cex = 1.5)
 dev.off()

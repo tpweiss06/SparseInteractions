@@ -6,12 +6,13 @@
 
 # Species 10 in test 5 is what we're going with!!
 
-#setwd("~/Desktop/Wyoming/SparseInteractions/BH_simulations/")
-setwd("~/Documents/Work/Current Papers/SparseInteractions/BH_simulations/")
+setwd("~/Desktop/Wyoming/SparseInteractions/BH_simulations/")
+#setwd("~/Documents/Work/Current Papers/SparseInteractions/BH_simulations/")
 
 # Set the current sample size and associated prefix for all graph and result
 #    file names
-N <- 30
+
+N <- 200
 max_N <- 200
 FilePrefix <- paste("N", N, "_", sep = "")
 
@@ -86,7 +87,7 @@ Ntp1 <- c(subset(FullSim, (species == Focal) & (run <= N) & (time == 1) & (thinn
 # Now run the preliminary fit of the model to assess parameter shrinkage
 N <- 2*N
 PrelimFit <- stan(file = PrelimStanPath, data = PrelimDataVec, iter = 3000,
-                  chains = 3, init = InitVals)#, control = list(adapt_delta = 0.95))
+                  chains = 3, init = InitVals, control = list(adapt_delta = 0.95))
 PrelimPosteriors <- extract(PrelimFit)
 FitFileName <- paste("StanFits/monoLambda_envAlpha/", FilePrefix, "PrelimFit.rdata", sep = "")
 save(PrelimFit, PrelimPosteriors, file = FitFileName)
