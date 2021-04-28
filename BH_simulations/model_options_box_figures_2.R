@@ -3,6 +3,25 @@ library(patchwork)
 library(HDInterval)
 setwd("~/Documents/Work/Current Papers/SparseInteractions/BH_simulations/")
 
+
+# plot theme
+theme_cw <- function () { 
+     theme_bw(base_size=12) %+replace% 
+          theme(
+               panel.background = element_blank(), 
+               plot.background = element_blank(), 
+               axis.ticks = element_line(colour = "grey70", size = rel(0.5)),
+               panel.grid.minor = element_blank(), 
+               panel.grid.major = element_blank(),
+               legend.background = element_blank(), 
+               legend.key = element_blank(),
+               strip.background = element_blank(), 
+               # axis.text=element_text(size=12),
+               #     strip.text=element_text(size=12),
+               complete = TRUE
+          )
+}
+
 # Create lists for the results from different sizes of datasets
 sample.size <- c(10, 20, 30, 50, 80, 100, 200) # need the final fits still for some of these
 file.prefixes <- paste('N', sample.size, '_', sep = "")
@@ -195,14 +214,14 @@ alpha.fit.long <- alpha.fit %>% pivot_longer(cols = starts_with('n'),
 a.terms <- ggplot(filter(alpha.fit.long, specific %in% c('n.ij','n.total')), 
        aes(x = sample.size, y = number)) + 
      geom_line(aes(color = alpha.type, linetype = specific)) +
-     theme_bw() + 
+     theme_cw() + 
      scale_color_manual(values = c(InterceptCol, SlopeCol), name = "Model",
                         labels = c(expression(alpha[ij]~intercepts), 
                                    expression(alpha[ij]~intercepts~and~alpha[eij]~slopes)),
-                        guide = guide_legend(label.hjust = 0)) +
+                        guide = guide_legend(label.hjust = 0, order = 1)) +
      scale_linetype_manual(values = c('solid','dashed'), name = 'Non-generic terms',
                            labels = c(expression(alpha[ij]~intercepts), expression(total)),
-                           guide = guide_legend(label.hjust = 0)) +
+                           guide = guide_legend(label.hjust = 0, order = 2)) +
      ylab('Number of non-generic terms') +
      xlab('Input data sample size')
 #ggsave(filename = 'Results/Box/alpha_terms.pdf', width = 8, height = 5, units = 'in')
@@ -213,7 +232,7 @@ a.post <- ggplot(alpha.fit, aes(x = sample.size, y = dev.mean,
      geom_point(position = position_dodge(5)) + 
      geom_errorbar(position = position_dodge(5), width = 0) +
     # geom_line() +
-     theme_bw() + 
+     theme_cw() + 
      scale_color_manual(values = c(InterceptCol, SlopeCol), name = "Model",
                         labels = c(expression(alpha[ij]~intercepts), 
                                    expression(alpha[ij]~intercepts~and~alpha[eij]~slopes)),
@@ -223,5 +242,5 @@ a.post <- ggplot(alpha.fit, aes(x = sample.size, y = dev.mean,
      theme(legend.position = 'none')
 #ggsave(filename = 'Results/Box/alpha_post.pdf', width = 6, height = 5, units = 'in')
 
-a.terms/a.post
+a.post/a.terms
 #ggsave(filename = 'Results/Box/alpha_combined_2.pdf', width = 6, height = 6, units = 'in')

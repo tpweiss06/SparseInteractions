@@ -2,6 +2,25 @@
 library(tidyverse)
 library(patchwork)
 library(HDInterval)
+
+# plot theme
+theme_cw <- function () { 
+     theme_bw(base_size=12) %+replace% 
+          theme(
+               panel.background = element_blank(), 
+               plot.background = element_blank(), 
+               axis.ticks = element_line(colour = "grey70", size = rel(0.5)),
+               panel.grid.minor = element_blank(), 
+               panel.grid.major = element_blank(),
+               legend.background = element_blank(), 
+               legend.key = element_blank(),
+               strip.background = element_blank(), 
+              # axis.text=element_text(size=12),
+          #     strip.text=element_text(size=12),
+               complete = TRUE
+          )
+}
+
 # monotonic lambda data
 setwd("~/Documents/Work/Current Papers/SparseInteractions/BH_simulations/")
 load("StanFits/monoLambda_constAlpha/N50_FinalFit.rdata")
@@ -41,15 +60,22 @@ lambda.true <- tibble(env.seq, post = as.factor(0), ind = 'true',
                       lambda.slope = rep(lambda.env, each = n))
 lambda.true$lambda.mono <- lambda.true %>% with(exp(lambda.int + lambda.slope*env.seq))
 
+lambda.comp <- rbind(lambda.post, lambda.true)
+
 # calculate comparisons
-HDInterval::hdi(FinalPosteriors$lambdas[,1], credMass = 0.6)
-HDInterval::hdi(FinalPosteriors$lambdas[,2], credMass = 0.6)
+(lambda.mean - post.mean)/lambda.mean
+(lambda.env - post.env)/lambda.env
 
 p.mono <- ggplot(lambda.ei.small, aes(x = env.seq, y = lambda.mono)) + 
      geom_line(aes(group = post), alpha = 0.02, color = 'grey50') + 
-     geom_line(data = lambda.true, color = 'red') +
-     geom_line(data = lambda.post, color = 'black', linetype = 'dashed') + 
-     theme_classic() + 
+     geom_line(data = lambda.comp, aes(color = ind, linetype = ind)) +
+     scale_color_manual(values = c('black','red'), name = '', 
+                        labels = c('Modeled','True')) + 
+     scale_linetype_manual(values = c('dashed','solid'), name = '', 
+                           labels = c('Modeled','True')) + 
+     #  geom_line(data = lambda.post, color = 'black', linetype = 'dashed') + 
+     theme_cw() + 
+     theme(legend.position = c(0.2, 0.9)) +
      ylab(expression(lambda[ei])) +
      xlab('Environment')
 #ggsave(filename = 'Results/Box/monoLambda_constAlpha_N50.pdf', width = 5, height = 5, units = 'in')
@@ -110,7 +136,7 @@ p.opt <- ggplot(lambda.ei.small, aes(x = env.seq, y = lambda.opt)) +
      geom_line(aes(group = post), alpha = 0.02, color = 'grey50') + 
      geom_line(data = lambda.true, color = 'red') +
      geom_line(data = lambda.post, color = 'black', linetype = 'dashed') + 
-     theme_classic() + 
+     theme_cw() + 
      ylab(expression(lambda[ei])) +
      xlab('Environment')
 #ggsave(filename = 'Results/Box/optLambda_constAlpha_N200.pdf', width = 5, height = 5, units = 'in')
