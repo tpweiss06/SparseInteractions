@@ -102,12 +102,15 @@ for(sn in 1:n.samples){
      
      # use the above quantities to calculate the posterior prediction intervals for the new data
      Growth_pred <- matrix(data = NA, nrow = PostLength, ncol = N_ppc)
+     GrowthRMSE <- numeric(length = PostLength)
      for(i in 1:PostLength){
           for(j in 1:N_ppc){
                SigmaTerm <- sum(alpha_eij[i,j,] * SpMatrix_ppc[j,])
                Ntp1_pred <- Nt_ppc[j] * lambda_ei[i,j] / (1 + SigmaTerm)
                Growth_pred[i,j] <- log((Ntp1_pred + 1)/Nt_ppc[j])
           }
+       deviation_sq <- (Growth_pred[i,] - Growth_ppc)^2
+       GrowthRMSE[i] <- sqrt(sum(deviation_sq) / N_ppc)
      }
      
      # Calculate final fit results for the ppc
@@ -119,6 +122,12 @@ for(sn in 1:n.samples){
                     alpha.fit$alpha.type == 'envAlpha', 'dev.sd'] <- sd(abs(pred.dev))
      alpha.fit[alpha.fit$sample.size == sample.size[sn] & 
                     alpha.fit$alpha.type == 'envAlpha', 'dev.se'] <- sd(abs(pred.dev))/sqrt(length(pred.dev))
+     alpha.fit[alpha.fit$sample.size == sample.size[sn] & 
+                 alpha.fit$alpha.type == 'envAlpha', 'rmse'] <- mean(GrowthRMSE)
+     alpha.fit[alpha.fit$sample.size == sample.size[sn] & 
+                 alpha.fit$alpha.type == 'envAlpha', 'rmse.low'] <- HDInterval::hdi(GrowthRMSE)[1]   
+     alpha.fit[alpha.fit$sample.size == sample.size[sn] & 
+                 alpha.fit$alpha.type == 'envAlpha', 'rmse.high'] <- HDInterval::hdi(GrowthRMSE)[2]   
 }
 
 
@@ -180,12 +189,15 @@ for(sn in 1:n.samples){
      
      # use the above quantities to calculate the posterior prediction intervals for the new data
      Growth_pred <- matrix(data = NA, nrow = PostLength, ncol = N_ppc)
+     GrowthRMSE <- numeric(length = PostLength)
      for(i in 1:PostLength){
           for(j in 1:N_ppc){
                SigmaTerm <- sum(alpha_ij[i,j,] * SpMatrix_ppc[j,])
                Ntp1_pred <- Nt_ppc[j] * lambda_ei[i,j] / (1 + SigmaTerm)
                Growth_pred[i,j] <- log((Ntp1_pred + 1)/Nt_ppc[j])
           }
+       deviation_sq <- (Growth_pred[i,] - Growth_ppc)^2
+       GrowthRMSE[i] <- sqrt(sum(deviation_sq) / N_ppc)
      }
      
      # Calculate final fit results for the ppc
@@ -197,50 +209,62 @@ for(sn in 1:n.samples){
                     alpha.fit$alpha.type == 'constAlpha', 'dev.sd'] <- sd(abs(pred.dev))
      alpha.fit[alpha.fit$sample.size == sample.size[sn] & 
                     alpha.fit$alpha.type == 'constAlpha', 'dev.se'] <- sd(abs(pred.dev))/sqrt(length(pred.dev))
+     alpha.fit[alpha.fit$sample.size == sample.size[sn] & 
+                 alpha.fit$alpha.type == 'constAlpha', 'rmse'] <- mean(GrowthRMSE)
+     alpha.fit[alpha.fit$sample.size == sample.size[sn] & 
+                 alpha.fit$alpha.type == 'constAlpha', 'rmse.low'] <- HDInterval::hdi(GrowthRMSE)[1]   
+     alpha.fit[alpha.fit$sample.size == sample.size[sn] & 
+                 alpha.fit$alpha.type == 'constAlpha', 'rmse.high'] <- HDInterval::hdi(GrowthRMSE)[2]   
+     
 }
 
 ## figure
-library(RColorBrewer)
-Dark2Cols <- brewer.pal(n = 8, name = "Dark2")
-InterceptCol <- Dark2Cols[1]
-SlopeCol <- Dark2Cols[2]
-ppcCol <- Dark2Cols[3]
+library(inauguration)
+InterceptCol <- inauguration("inauguration_2021")[3]
+SlopeCol <- inauguration("inauguration_2021")[4]
+#ppcCol <- Dark2Cols[3]
 
 alpha.fit[alpha.fit == -1] <- NA
 alpha.fit$sample.size.2 <- factor(alpha.fit$sample.size)
-alpha.fit.long <- alpha.fit %>% pivot_longer(cols = starts_with('n'), 
-                                             names_to = 'specific', values_to = 'number')
+alpha.fit.long <- alpha.fit %>% 
+  pivot_longer(cols = starts_with('n'), names_to = 'specific', values_to = 'number') %>%
+  filter(!(alpha.type == 'constAlpha' & specific == 'n.total') & !(specific == 'n.eij'))
 
-a.terms <- ggplot(filter(alpha.fit.long, specific %in% c('n.ij','n.total')), 
-       aes(x = sample.size, y = number)) + 
-     geom_line(aes(color = alpha.type, linetype = specific)) +
+a.terms <- ggplot(alpha.fit.long, 
+       aes(x = sample.size, y = number, 
+           color = interaction(alpha.type, specific),
+           linetype = interaction(alpha.type, specific))) + 
+      geom_line() +
+    #geom_point(position = position_dodge(5), aes(color = alpha.type, shape = specific)) + 
      theme_cw() + 
-     scale_color_manual(values = c(InterceptCol, SlopeCol), name = "Model",
-                        labels = c(expression(alpha[ij]~intercepts), 
-                                   expression(alpha[ij]~intercepts~and~alpha[eij]~slopes)),
-                        guide = guide_legend(label.hjust = 0, order = 1)) +
-     scale_linetype_manual(values = c('solid','dashed'), name = 'Non-generic terms',
-                           labels = c(expression(alpha[ij]~intercepts), expression(total)),
-                           guide = guide_legend(label.hjust = 0, order = 2)) +
+  theme(legend.position = c(0.75, 0.2)) + 
+     scale_color_manual(values = c(InterceptCol, SlopeCol, SlopeCol), name = "",
+                        labels = c(expression(Simple~context:~alpha[ij]~pairs), 
+                                   expression(Complex~context:~alpha[ij]~pairs),
+                                   expression(Complex~context:~all~terms)),
+                        guide = guide_legend(label.hjust = 0)) +
+     scale_linetype_manual(values = c('solid','solid', 'dashed'), name = "",
+                           labels = c(expression(Simple~context:~alpha[ij]~pairs), 
+                                      expression(Complex~context:~alpha[ij]~pairs),
+                                      expression(Complex~context:~all~terms)),
+                           guide = guide_legend(label.hjust = 0)) +
      ylab('Number of non-generic terms') +
      xlab('Input data sample size')
-#ggsave(filename = 'Results/Box/alpha_terms.pdf', width = 8, height = 5, units = 'in')
+#ggsave(filename = 'Results/Box/alpha_terms_3.pdf', width = 8, height = 5, units = 'in')
 
-a.post <- ggplot(alpha.fit, aes(x = sample.size, y = dev.mean, 
-                      ymin = dev.mean - dev.se, ymax = dev.mean + dev.se,
+a.post <- ggplot(alpha.fit, aes(x = sample.size, y = rmse, 
+                      ymin = rmse.low, ymax = rmse.high,
                       color = alpha.type)) + 
      geom_point(position = position_dodge(5)) + 
      geom_errorbar(position = position_dodge(5), width = 0) +
-    # geom_line() +
      theme_cw() + 
-     scale_color_manual(values = c(InterceptCol, SlopeCol), name = "Model",
-                        labels = c(expression(alpha[ij]~intercepts), 
-                                   expression(alpha[ij]~intercepts~and~alpha[eij]~slopes)),
+     scale_color_manual(values = c(InterceptCol, SlopeCol), name = '',
+                        labels = c('Simple context','Complex context'),
                         guide = guide_legend(label.hjust = 0)) +
      ylab('Deviation from true growth rates') +
      xlab('Input data sample size') +
-     theme(legend.position = 'none')
+     theme(legend.position = c(0.8, 0.8))
 #ggsave(filename = 'Results/Box/alpha_post.pdf', width = 6, height = 5, units = 'in')
 
 a.post/a.terms
-#ggsave(filename = 'Results/Box/alpha_combined_2.pdf', width = 6, height = 6, units = 'in')
+#ggsave(filename = 'Results/Box/alpha_combined_3.pdf', width = 5, height = 8, units = 'in')
