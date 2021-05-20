@@ -12,8 +12,12 @@ setwd("~/Desktop/Wyoming/SparseInteractions/BH_simulations/")
 # Set the current sample size and associated prefix for all graph and result
 #    file names
 
+<<<<<<< HEAD
 N <- 50
 
+=======
+N <- 10
+>>>>>>> 183784e7c74451701b1b9a8198fccfeb32af20c9
 max_N <- 200
 FilePrefix <- paste("N", N, "_", sep = "")
 
@@ -118,6 +122,7 @@ for(i in 1:4){
         acf(PrelimPosteriors$alpha_hat_eij[,PlotSamples[i]])
 }
 
+# load(FitFileName)
 # Determine the parameters that should be included and run the final model
 plot(PrelimFit, pars = "alpha_hat_ij")
 plot(PrelimFit, pars = "alpha_hat_eij")
