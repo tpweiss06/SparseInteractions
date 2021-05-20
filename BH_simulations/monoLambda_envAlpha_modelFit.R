@@ -12,7 +12,7 @@ setwd("~/Desktop/Wyoming/SparseInteractions/BH_simulations/")
 # Set the current sample size and associated prefix for all graph and result
 #    file names
 
-N <- 200
+N <- 50
 
 max_N <- 200
 FilePrefix <- paste("N", N, "_", sep = "")
@@ -42,9 +42,11 @@ rstan_options(auto_write = TRUE)
 S <- 15
 Intra <- rep(0, S)
 Intra[Focal] <- 1
-tau0 <- 2
-slab_df <- 2*S - 1
-slab_scale <- 1 
+tau0 <- 1
+slab_df <- 4 # v from paper
+slab_scale <- sqrt(2) # s from paper
+#slab_df <- 2*S - 1
+#slab_scale <- 1 
 
 # Set initial values to avoid initial problems with the random number generator
 ChainInitials <- list(lambdas = c(TrueVals$lambda.mean[Focal], TrueVals$lambda.env[Focal]), 
