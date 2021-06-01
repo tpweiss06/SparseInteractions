@@ -9,7 +9,7 @@ setwd("~/Documents/Work/Current Papers/SparseInteractions/BH_simulations/")
 
 # Set the current sample size and associated prefix for all graph and result
 #    file names
-N <- 150
+N <- 80
 max_N <- 200
 FilePrefix <- paste("N", N, "_", sep = "")
 
@@ -34,9 +34,9 @@ rstan_options(auto_write = TRUE)
 S <- 15
 Intra <- rep(0, S)
 Intra[Focal] <- 1
-tau0 <- 2
-slab_df <- 2*S - 1
-slab_scale <- 1
+tau0 <- 1
+slab_df <- 4
+slab_scale <- sqrt(2)
 
 # Set initial values to avoid initial problems with the random number generator
 ChainInitials <- list(lambdas = c(TrueVals$lambda.mean[Focal], TrueVals$lambda.env[Focal]), 
@@ -81,9 +81,9 @@ Ntp1 <- c(subset(FullSim, (species == Focal) & (run <= N) & (time == 1) & (thinn
 # Now run the perliminary fit of the model to assess parameter shrinkage
 N <- length(Nt)
 PrelimFit <- stan(file = PrelimStanPath, data = PrelimDataVec, iter = 3000,
-                  chains = 3, init = InitVals, control = list(max_treedepth = 15, adapt_delta = 0.99))
+                  chains = 3, init = InitVals, control = list(max_treedepth = 15, adapt_delta = 0.995))
 PrelimPosteriors <- extract(PrelimFit)
-FitFileName <- paste("StanFits/monoLambda_constAlpha/", FilePrefix, "PrelimFit.rdata", sep = "")
+FitFileName <- paste("StanFits/monoLambda_constAlpha/", FilePrefix, "PrelimFit_b.rdata", sep = "")
 save(PrelimFit, PrelimPosteriors, file = FitFileName)
 
 # Examine diagnostics and determine if parameters of model run should be updated
@@ -192,7 +192,7 @@ InitVals <- list(ChainInitials, ChainInitials, ChainInitials)
 FinalFit <- stan(file = FinalStanPath, data = FinalDataVec, iter = 3000,
                  chains = 3, init = InitVals, control = list(max_treedepth = 15))
 FinalPosteriors <- rstan::extract(FinalFit)
-FitFileName <- paste("StanFits/monoLambda_constAlpha/", FilePrefix, "FinalFit.rdata", sep = "")
+FitFileName <- paste("StanFits/monoLambda_constAlpha/", FilePrefix, "FinalFit_b.rdata", sep = "")
 save(FinalFit, FinalPosteriors, Inclusion_ij, file = FitFileName)
 
 # Examine diagnostics and determine if parameters of model run should be updated

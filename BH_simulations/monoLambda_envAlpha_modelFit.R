@@ -4,20 +4,16 @@
 #    on 300 out of sample data points, calculate the deviance in parameter 
 #    estimates from the true values, and save it all for later plotting.
 
-# Species 10 in test 5 is what we're going with!!
+# Species 1
 
-setwd("~/Desktop/Wyoming/SparseInteractions/BH_simulations/")
-#setwd("~/Documents/Work/Current Papers/SparseInteractions/BH_simulations/")
+#setwd("~/Desktop/Wyoming/SparseInteractions/BH_simulations/")
+setwd("~/Documents/Work/Current Papers/SparseInteractions/BH_simulations/")
 
 # Set the current sample size and associated prefix for all graph and result
 #    file names
 
-<<<<<<< HEAD
-N <- 50
+N <- 100
 
-=======
-N <- 10
->>>>>>> 183784e7c74451701b1b9a8198fccfeb32af20c9
 max_N <- 200
 FilePrefix <- paste("N", N, "_", sep = "")
 
@@ -94,9 +90,9 @@ Ntp1 <- c(subset(FullSim, (species == Focal) & (run <= N) & (time == 1) & (thinn
 # Now run the preliminary fit of the model to assess parameter shrinkage
 N <- 2*N
 PrelimFit <- stan(file = PrelimStanPath, data = PrelimDataVec, iter = 3000,
-                  chains = 3, init = InitVals, control = list(adapt_delta = 0.95))
+                  chains = 3, init = InitVals, control = list(adapt_delta = 0.99, max_treedepth = 15))
 PrelimPosteriors <- extract(PrelimFit)
-FitFileName <- paste("StanFits/monoLambda_envAlpha/", FilePrefix, "PrelimFit.rdata", sep = "")
+FitFileName <- paste("StanFits/monoLambda_envAlpha/", FilePrefix, "PrelimFit_b.rdata", sep = "")
 save(PrelimFit, PrelimPosteriors, file = FitFileName)
 
 # Examine diagnostics and determine if parameters of model run should be updated
@@ -162,7 +158,7 @@ InitVals <- list(ChainInitials, ChainInitials, ChainInitials)
 FinalFit <- stan(file = FinalStanPath, data = FinalDataVec, iter = 3000,
                  chains = 3, init = InitVals, control = list(adapt_delta = 0.9))
 Posteriors <- extract(FinalFit)
-FitFileName <- paste("StanFits/monoLambda_envAlpha/", FilePrefix, "FinalFit.rdata", sep = "")
+FitFileName <- paste("StanFits/monoLambda_envAlpha/", FilePrefix, "FinalFit_b.rdata", sep = "")
 save(FinalFit, Posteriors, Inclusion_ij, Inclusion_eij, file = FitFileName)
 
 # Examine diagnostics and determine if parameters of model run should be updated

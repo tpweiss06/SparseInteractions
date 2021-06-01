@@ -23,7 +23,7 @@ theme_cw <- function () {
 }
 
 # Create lists for the results from different sizes of datasets
-sample.size <- c(10, 20, 30, 50, 80, 100, 200) # need the final fits still for some of these
+sample.size <- c(10, 20, 50, 80, 100, 200) # need the final fits still for some of these
 file.prefixes <- paste('N', sample.size, '_', sep = "")
 n.samples <- length(file.prefixes)
 alpha.type <- c('envAlpha', 'constAlpha')
@@ -53,7 +53,7 @@ Growth_ppc <- log((Ntp1_ppc + 1)/Nt_ppc)
 for(sn in 1:n.samples){
      ## number of samples included
      file.prelim <- paste("StanFits/monoLambda_envAlpha/",
-                          file.prefixes[sn],"PrelimFit.rdata", sep = "")
+                          file.prefixes[sn],"PrelimFit_b.rdata", sep = "")
      load(file.prelim)
      Inclusion_ij <- rep(0, S)
      Inclusion_eij <- rep(0, S)
@@ -81,7 +81,7 @@ for(sn in 1:n.samples){
      
      ## ppc deviations
      file.final <- paste("StanFits/monoLambda_envAlpha/",
-                      file.prefixes[sn],"FinalFit.rdata", sep = "")
+                      file.prefixes[sn],"FinalFit_b.rdata", sep = "")
      load(file.final)
      
      PostLength <- length(Posteriors$alpha_generic[,1])
@@ -127,7 +127,13 @@ for(sn in 1:n.samples){
      alpha.fit[alpha.fit$sample.size == sample.size[sn] & 
                  alpha.fit$alpha.type == 'envAlpha', 'rmse.low'] <- HDInterval::hdi(GrowthRMSE)[1]   
      alpha.fit[alpha.fit$sample.size == sample.size[sn] & 
-                 alpha.fit$alpha.type == 'envAlpha', 'rmse.high'] <- HDInterval::hdi(GrowthRMSE)[2]   
+                 alpha.fit$alpha.type == 'envAlpha', 'rmse.high'] <- HDInterval::hdi(GrowthRMSE)[2] 
+     alpha.fit[alpha.fit$sample.size == sample.size[sn] & 
+                 alpha.fit$alpha.type == 'envAlpha', 'tau'] <- mean(PrelimPosteriors$tau)
+     alpha.fit[alpha.fit$sample.size == sample.size[sn] & 
+                 alpha.fit$alpha.type == 'envAlpha', 'tau.low'] <- HDInterval::hdi(PrelimPosteriors$tau)[1]   
+     alpha.fit[alpha.fit$sample.size == sample.size[sn] & 
+                 alpha.fit$alpha.type == 'envAlpha', 'tau.high'] <- HDInterval::hdi(PrelimPosteriors$tau)[2] 
 }
 
 
@@ -149,7 +155,7 @@ Growth_ppc <- log((Ntp1_ppc + 1)/Nt_ppc)
 ## number of samples included
 for(sn in 1:n.samples){
      file.prelim <- paste("StanFits/monoLambda_constAlpha/",
-                          file.prefixes[sn],"PrelimFit.rdata", sep = "")
+                          file.prefixes[sn],"PrelimFit_b.rdata", sep = "")
      load(file.prelim)
      Inclusion_ij <- rep(0, S)
      IntLevel <- 0.5
@@ -169,7 +175,7 @@ for(sn in 1:n.samples){
      
      ## ppc deviations
      file.final <- paste("StanFits/monoLambda_constAlpha/",
-                         file.prefixes[sn],"FinalFit.rdata", sep = "")
+                         file.prefixes[sn],"FinalFit_b.rdata", sep = "")
      load(file.final)
      
      PostLength <- length(FinalPosteriors$alpha_generic)
@@ -190,6 +196,7 @@ for(sn in 1:n.samples){
      # use the above quantities to calculate the posterior prediction intervals for the new data
      Growth_pred <- matrix(data = NA, nrow = PostLength, ncol = N_ppc)
      GrowthRMSE <- numeric(length = PostLength)
+     
      for(i in 1:PostLength){
           for(j in 1:N_ppc){
                SigmaTerm <- sum(alpha_ij[i,j,] * SpMatrix_ppc[j,])
@@ -215,7 +222,12 @@ for(sn in 1:n.samples){
                  alpha.fit$alpha.type == 'constAlpha', 'rmse.low'] <- HDInterval::hdi(GrowthRMSE)[1]   
      alpha.fit[alpha.fit$sample.size == sample.size[sn] & 
                  alpha.fit$alpha.type == 'constAlpha', 'rmse.high'] <- HDInterval::hdi(GrowthRMSE)[2]   
-     
+     alpha.fit[alpha.fit$sample.size == sample.size[sn] & 
+                 alpha.fit$alpha.type == 'constAlpha', 'tau'] <- mean(PrelimPosteriors$tau)
+     alpha.fit[alpha.fit$sample.size == sample.size[sn] & 
+                 alpha.fit$alpha.type == 'constAlpha', 'tau.low'] <- HDInterval::hdi(PrelimPosteriors$tau)[1]   
+     alpha.fit[alpha.fit$sample.size == sample.size[sn] & 
+                 alpha.fit$alpha.type == 'constAlpha', 'tau.high'] <- HDInterval::hdi(PrelimPosteriors$tau)[2] 
 }
 
 ## figure
@@ -250,7 +262,7 @@ a.terms <- ggplot(alpha.fit.long,
                            guide = guide_legend(label.hjust = 0)) +
      ylab('Number of non-generic terms') +
      xlab('Input data sample size')
-#ggsave(filename = 'Results/Box/alpha_terms_3.pdf', width = 8, height = 5, units = 'in')
+#ggsave(filename = 'Results/Box/alpha_terms_updated.pdf', width = 8, height = 5, units = 'in')
 
 a.post <- ggplot(alpha.fit, aes(x = sample.size, y = rmse, 
                       ymin = rmse.low, ymax = rmse.high,
@@ -267,4 +279,19 @@ a.post <- ggplot(alpha.fit, aes(x = sample.size, y = rmse,
 #ggsave(filename = 'Results/Box/alpha_post.pdf', width = 6, height = 5, units = 'in')
 
 a.post/a.terms
-#ggsave(filename = 'Results/Box/alpha_combined_3.pdf', width = 5, height = 8, units = 'in')
+#ggsave(filename = 'Results/Box/alpha_combined_4.pdf', width = 5, height = 8, units = 'in')
+
+
+a.tau <- ggplot(alpha.fit, aes(x = sample.size, y = tau, 
+                                ymin = tau.low, ymax = tau.high,
+                                color = alpha.type)) + 
+  geom_point(position = position_dodge(5)) + 
+  geom_errorbar(position = position_dodge(5), width = 0) +
+  theme_cw() + 
+  scale_color_manual(values = c(InterceptCol, SlopeCol), name = '',
+                     labels = c('Simple context','Complex context'),
+                     guide = guide_legend(label.hjust = 0)) +
+  ylab('Tau') +
+  xlab('Input data sample size') +
+  theme(legend.position = c(0.8, 0.8))
+#ggsave(filename = 'Results/Box/alpha_tau_mean.pdf', width = 6, height = 5, units = 'in')

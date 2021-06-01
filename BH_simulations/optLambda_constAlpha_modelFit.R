@@ -37,9 +37,9 @@ rstan_options(auto_write = TRUE)
 S <- 15
 Intra <- rep(0, S)
 Intra[Focal] <- 1
-tau0 <- 2
-slab_df <- 2*S - 1
-slab_scale <- 1
+tau0 <- 1
+slab_df <- 4
+slab_scale <- sqrt(2)
 
 # Set initial values to avoid initial problems with the random number generator
 ChainInitials <- list(lambda_max = 1, lambda_opt = 0, lambda_width = 0.5, 
