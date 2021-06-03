@@ -273,13 +273,21 @@ a.post <- ggplot(alpha.fit, aes(x = sample.size, y = rmse,
      scale_color_manual(values = c(InterceptCol, SlopeCol), name = '',
                         labels = c('Simple context','Complex context'),
                         guide = guide_legend(label.hjust = 0)) +
-     ylab('Deviation from true growth rates') +
+     ylab('Root mean squared error') +
      xlab('Input data sample size') +
-     theme(legend.position = c(0.8, 0.8))
+     theme(legend.position = c(0.8, 0.9))
 #ggsave(filename = 'Results/Box/alpha_post.pdf', width = 6, height = 5, units = 'in')
 
 a.post/a.terms
-#ggsave(filename = 'Results/Box/alpha_combined_4.pdf', width = 5, height = 8, units = 'in')
+# ggsave(filename = 'Results/Box/alpha_combined_4.pdf', width = 5, height = 8, units = 'in')
+
+patchwork <- (p.mono + p.opt) / (a.post + a.terms)
+
+patchwork + 
+  plot_annotation(tag_levels = 'a')  & 
+  theme(plot.tag = element_text(face = "bold"))
+ggsave(filename = 'Results/Box/box_figure.pdf', width = 10, height = 8, units = 'in')
+
 
 
 a.tau <- ggplot(alpha.fit, aes(x = sample.size, y = tau, 
