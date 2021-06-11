@@ -2,3 +2,4 @@
 .Rhistory
 .Ruserdata
 *.rds
+*.DS_Store
