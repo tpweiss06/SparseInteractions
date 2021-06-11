@@ -18,15 +18,12 @@ max_N <- 200
 FilePrefix <- paste("N", N, "_", sep = "")
 
 # Now assign the focal species and the file paths for the stan models
-#NonGenericIntercept <- c(1, 2, 5, 6, 10, 12, 15)
-#NonGenericSlope <- c(1, 2, 6, 9, 11, 13, 15)
 Focal <- 1
 PrelimStanPath <- "StanCode/Prelim_monoLambda_envAlpha.stan"
 FinalStanPath <- "StanCode/Final_monoLambda_envAlpha.stan"
 
 # Load in the appropriate data
 FullSim <- read.csv("Simulations/simulation_perturb2.csv")
-#ThinSim <- read.csv("Simulations/simulation_thinned_5_10.csv")
 TrueVals <- read.csv("Simulations/parameters_perturb2.csv")
 TrueAlphaMeans <- TrueVals$alpha.1
 TrueAlphaSlopes <- TrueVals$alpha.env.gen + TrueVals$alpha.env.spec
@@ -43,10 +40,8 @@ S <- 15
 Intra <- rep(0, S)
 Intra[Focal] <- 1
 tau0 <- 1
-slab_df <- 4 # v from paper
-slab_scale <- sqrt(2) # s from paper
-#slab_df <- 2*S - 1
-#slab_scale <- 1 
+slab_df <- 4 
+slab_scale <- sqrt(2) 
 
 # Set initial values to avoid initial problems with the random number generator
 ChainInitials <- list(lambdas = c(TrueVals$lambda.mean[Focal], TrueVals$lambda.env[Focal]), 
@@ -257,7 +252,6 @@ for(s in 1:S){
 }
 
 # Finally, calculate the "true" generic alpha that the model is attempting to estimate
-# alpha_generic * sigma(N) = sigma(N*alpha_ij)
 GenericIntercepts <- 1 - Inclusion_ij
 GenericSlopes <- 1 - Inclusion_eij
 GenericIntercepts[Focal] <- 0
