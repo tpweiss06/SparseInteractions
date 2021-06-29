@@ -173,7 +173,7 @@ Growth_ppc <- log((Ntp1_ppc + 1)/Nt_ppc)
 for(sn in 1:n.samples){
         ## number of samples included
         file.prelim <- paste("StanFits/monoLambda_envAlpha/",
-                             file.prefixes[sn],"PrelimFit_b.rdata", sep = "")
+                             file.prefixes[sn],"PrelimFit.rdata", sep = "")
         load(file.prelim)
         Inclusion_ij <- rep(0, S)
         Inclusion_eij <- rep(0, S)
@@ -295,7 +295,7 @@ for(sn in 1:n.samples){
         
         ## ppc deviations
         file.final <- paste("StanFits/monoLambda_constAlpha/",
-                            file.prefixes[sn],"FinalFit_b.rdata", sep = "")
+                            file.prefixes[sn],"FinalFit.rdata", sep = "")
         load(file.final)
         
         PostLength <- length(FinalPosteriors$alpha_generic)

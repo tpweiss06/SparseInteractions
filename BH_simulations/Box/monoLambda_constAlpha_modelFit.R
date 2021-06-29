@@ -83,7 +83,7 @@ N <- length(Nt)
 PrelimFit <- stan(file = PrelimStanPath, data = PrelimDataVec, iter = 3000,
                   chains = 3, init = InitVals, control = list(max_treedepth = 15, adapt_delta = 0.995))
 PrelimPosteriors <- extract(PrelimFit)
-FitFileName <- paste("StanFits/monoLambda_constAlpha/", FilePrefix, "PrelimFit_b.rdata", sep = "")
+FitFileName <- paste("StanFits/monoLambda_constAlpha/", FilePrefix, "PrelimFit.rdata", sep = "")
 save(PrelimFit, PrelimPosteriors, file = FitFileName)
 
 # Examine diagnostics and determine if parameters of model run should be updated
@@ -192,7 +192,7 @@ InitVals <- list(ChainInitials, ChainInitials, ChainInitials)
 FinalFit <- stan(file = FinalStanPath, data = FinalDataVec, iter = 3000,
                  chains = 3, init = InitVals, control = list(max_treedepth = 15))
 FinalPosteriors <- rstan::extract(FinalFit)
-FitFileName <- paste("StanFits/monoLambda_constAlpha/", FilePrefix, "FinalFit_b.rdata", sep = "")
+FitFileName <- paste("StanFits/monoLambda_constAlpha/", FilePrefix, "FinalFit.rdata", sep = "")
 save(FinalFit, FinalPosteriors, Inclusion_ij, file = FitFileName)
 
 # Examine diagnostics and determine if parameters of model run should be updated
