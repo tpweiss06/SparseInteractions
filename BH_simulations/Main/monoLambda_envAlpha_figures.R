@@ -2,7 +2,7 @@
 #       interactions paper
 
 library(RColorBrewer)
-setwd("~/Desktop/Wyoming/SparseInteractions/BH_simulations/")
+setwd("~/Desktop/Wyoming/SparseInteractions/BH_simulations/Main/")
 
 # Create lists for the results from different sizes of datasets
 ppcPreds <- vector(mode = "list", length = 3)
@@ -105,7 +105,7 @@ Letters <- matrix(c(expression(bold("a")), expression(bold("b")), expression(bol
                     expression(bold("d")), expression(bold("e")), expression(bold("f"))),
                     nrow = 3, ncol = 2, byrow = TRUE)
 
-FigName <- "Results/monoLambda_envAlpha/SimResults.pdf"
+FigName <- "SimResults.pdf"
 pdf(file = FigName, width = 7, height = 8, onefile = FALSE, paper = "special")
      par(mfrow = c(3,2), mar = c(2, 2.5, 2, 2.5), oma = c(2, 0, 2, 0))
      for(i in 1:3){

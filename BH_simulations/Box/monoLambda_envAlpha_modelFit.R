@@ -7,7 +7,7 @@
 # Species 1
 
 #setwd("~/Desktop/Wyoming/SparseInteractions/BH_simulations/")
-setwd("~/Documents/Work/Current Papers/SparseInteractions/BH_simulations/")
+setwd("~/Documents/Work/Current Papers/SparseInteractions/BH_simulations/Box/")
 
 # Set the current sample size and associated prefix for all graph and result
 #    file names
@@ -23,8 +23,8 @@ PrelimStanPath <- "StanCode/Prelim_monoLambda_envAlpha.stan"
 FinalStanPath <- "StanCode/Final_monoLambda_envAlpha.stan"
 
 # Load in the appropriate data
-FullSim <- read.csv("Simulations/simulation_perturb2.csv")
-TrueVals <- read.csv("Simulations/parameters_perturb2.csv")
+FullSim <- read.csv("SimulationsDataFiles/simulation_perturb2.csv")
+TrueVals <- read.csv("SimulationsDataFiles/parameters_perturb2.csv")
 TrueAlphaMeans <- TrueVals$alpha.1
 TrueAlphaSlopes <- TrueVals$alpha.env.gen + TrueVals$alpha.env.spec
 

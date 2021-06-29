@@ -5,7 +5,7 @@
 #    data points.
 
 #setwd("~/Desktop/Wyoming/SparseInteractions/BH_simulations/")
-setwd("~/Documents/Work/Current Papers/SparseInteractions/BH_simulations/")
+setwd("~/Documents/Work/Current Papers/SparseInteractions/BH_simulations/Box/")
 
 # Set the current sample size and associated prefix for all graph and result
 #    file names
@@ -19,8 +19,8 @@ PrelimStanPath <- "StanCode/Prelim_monoLambda_constAlpha.stan"
 FinalStanPath <- "StanCode/Final_monoLambda_constAlpha.stan"
 
 # Load in the appropriate data
-FullSim <- read.csv("Simulations/simulation_perturb2_const.csv")
-TrueVals <- read.csv("Simulations/parameters_perturb2_const.csv")
+FullSim <- read.csv("SimulationsDataFiles/simulation_perturb2_const.csv")
+TrueVals <- read.csv("SimulationsDataFiles/parameters_perturb2_const.csv")
 TrueAlphas <- TrueVals$alpha.1
 
 # Load necessary libraries

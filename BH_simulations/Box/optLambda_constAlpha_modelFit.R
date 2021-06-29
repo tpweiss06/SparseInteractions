@@ -5,22 +5,22 @@
 #    data points.
 
 #setwd("~/Desktop/Wyoming/SparseInteractions/BH_simulations/")
-setwd("~/Documents/Work/Current Papers/SparseInteractions/BH_simulations/")
+setwd("~/Documents/Work/Current Papers/SparseInteractions/BH_simulations/Box/")
 
 # Set the current sample size and associated prefix for all graph and result
 #    file names
-N <- 200
+N <- 50
 max_N <- 200
 FilePrefix <- paste("N", N, "_", sep = "")
 
 # Now assign the focal species and the file paths for the stan models
-Focal <- 5
+Focal <- 8
 PrelimStanPath <- "StanCode/Prelim_optLambda_constAlpha.stan"
 FinalStanPath <- "StanCode/Final_optLambda_constAlpha.stan"
 
 # Load in the appropriate data
-FullSim <- read.csv("Simulations/simulation_perturb_opt_const_2.csv")
-TrueVals <- read.csv("Simulations/parameters_perturb_opt_const_2.csv")
+FullSim <- read.csv("SimulationsDataFiles/simulation_perturb_opt_const.csv")
+TrueVals <- read.csv("SimulationsDataFiles/parameters_perturb_opt_const.csv")
 TrueAlphas <- exp(TrueVals$alpha.5)
 TrueLambdaOpt <- TrueVals$z.env[Focal]
 TrueLambdaMax <- TrueVals$lambda.max[Focal]

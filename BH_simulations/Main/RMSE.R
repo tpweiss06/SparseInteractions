@@ -1,7 +1,7 @@
 # calculate the root mean squared error (RMSE) for our growth predictions and
 #       lambda, intra, and generic terms
 
-setwd("~/Desktop/Wyoming/SparseInteractions/BH_simulations/")
+setwd("~/Desktop/Wyoming/SparseInteractions/BH_simulations/Main/")
 
 # Get the data needed for the ppc calculations
 Focal <- 1

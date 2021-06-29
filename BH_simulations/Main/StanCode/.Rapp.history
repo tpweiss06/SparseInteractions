@@ -1,0 +1,2 @@
+load("/Users/chhaya/Documents/Work/Current Papers/SparseInteractions/BH_simulations/StanCode/Prelim_monoLambda_envAlpha.rds")
+load("/Users/chhaya/Documents/Work/Current Papers/SparseInteractions/BH_simulations/StanCode/Prelim_monoLambda_constAlpha.rds")
