@@ -1,4 +1,3 @@
-
 library(tidyverse)
 library(patchwork)
 library(HDInterval)
@@ -15,8 +14,6 @@ theme_cw <- function () {
                legend.background = element_blank(), 
                legend.key = element_blank(),
                strip.background = element_blank(), 
-              # axis.text=element_text(size=12),
-          #     strip.text=element_text(size=12),
                complete = TRUE
           )
 }
@@ -24,7 +21,7 @@ theme_cw <- function () {
 ### Box Figure part 1: different formulas for lambda ---------------
 
 # monotonic lambda data
-setwd("~/Documents/Work/Current Papers/SparseInteractions/BH_simulations/Box/")
+setwd("./BH_simulations/Box/") # relative location within the SparseInteractions project
 load("StanFits/monoLambda_constAlpha/N50_FinalFit.rdata")
 PostLength <- length(FinalPosteriors$alpha_generic)
 Focal <- 1
@@ -75,7 +72,6 @@ p.mono <- ggplot(lambda.ei.small, aes(x = env.seq, y = lambda.mono)) +
                         labels = c('Modeled','True')) + 
      scale_linetype_manual(values = c('dashed','solid'), name = '', 
                            labels = c('Modeled','True')) + 
-     #  geom_line(data = lambda.post, color = 'black', linetype = 'dashed') + 
      theme_cw() + 
      theme(legend.position = c(0.2, 0.9)) +
      ylab(expression(lambda[ei])) +
@@ -143,7 +139,7 @@ p.opt <- ggplot(lambda.ei.small, aes(x = env.seq, y = lambda.opt)) +
 
 ### Box figure part 2: different options for alpha------------
 # Create lists for the results from different sizes of datasets
-sample.size <- c(10, 20, 50, 80, 100, 200) # need the final fits still for some of these
+sample.size <- c(10, 20, 50, 80, 100, 200)
 file.prefixes <- paste('N', sample.size, '_', sep = "")
 n.samples <- length(file.prefixes)
 alpha.type <- c('envAlpha', 'constAlpha')
@@ -201,7 +197,7 @@ for(sn in 1:n.samples){
         
         ## ppc deviations
         file.final <- paste("StanFits/monoLambda_envAlpha/",
-                            file.prefixes[sn],"FinalFit_b.rdata", sep = "")
+                            file.prefixes[sn],"FinalFit.rdata", sep = "")
         load(file.final)
         
         PostLength <- length(Posteriors$alpha_generic[,1])
@@ -275,7 +271,7 @@ Growth_ppc <- log((Ntp1_ppc + 1)/Nt_ppc)
 ## number of samples included
 for(sn in 1:n.samples){
         file.prelim <- paste("StanFits/monoLambda_constAlpha/",
-                             file.prefixes[sn],"PrelimFit_b.rdata", sep = "")
+                             file.prefixes[sn],"PrelimFit.rdata", sep = "")
         load(file.prelim)
         Inclusion_ij <- rep(0, S)
         IntLevel <- 0.5
@@ -351,10 +347,9 @@ for(sn in 1:n.samples){
 }
 
 ## figure
-library(inauguration)
-InterceptCol <- inauguration("inauguration_2021")[3]
-SlopeCol <- inauguration("inauguration_2021")[4]
-#ppcCol <- Dark2Cols[3]
+# colors selected from the inauguration() package
+InterceptCol <- "#f3c483"
+SlopeCol <- "#5c1a33"
 
 alpha.fit[alpha.fit == -1] <- NA
 alpha.fit$sample.size.2 <- factor(alpha.fit$sample.size)
@@ -367,7 +362,6 @@ a.terms <- ggplot(alpha.fit.long,
                       color = interaction(alpha.type, specific),
                       linetype = interaction(alpha.type, specific))) + 
         geom_line() +
-        #geom_point(position = position_dodge(5), aes(color = alpha.type, shape = specific)) + 
         theme_cw() + 
         theme(legend.position = c(0.75, 0.2)) + 
         scale_color_manual(values = c(InterceptCol, SlopeCol, SlopeCol), name = "",
@@ -410,15 +404,15 @@ a.tau <- ggplot(alpha.fit, aes(x = sample.size, y = tau,
         ylab('Tau') +
         xlab('Input data sample size') +
         theme(legend.position = c(0.8, 0.8))
-#ggsave(filename = 'alpha_tau_mean.pdf', width = 6, height = 5, units = 'in')
 
 
-### Box figure compining parts ---------------
+### Box figure combining parts ---------------
 
 patchwork <- (p.mono + p.opt) / (a.post + a.terms)
 
 patchwork + 
         plot_annotation(tag_levels = 'a')  & 
         theme(plot.tag = element_text(face = "bold"))
-#ggsave(filename = 'box_figure.pdf', width = 10, height = 8, units = 'in')
+
+ggsave(filename = 'box_figure.pdf', width = 10, height = 8, units = 'in')
 
