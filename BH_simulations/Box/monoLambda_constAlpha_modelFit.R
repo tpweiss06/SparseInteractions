@@ -4,16 +4,17 @@
 #    parameter estimates and posterior predictive checks on 300 out of sample
 #    data points.
 
-#setwd("~/Desktop/Wyoming/SparseInteractions/BH_simulations/")
-setwd("~/Documents/Work/Current Papers/SparseInteractions/BH_simulations/Box/")
+rm(list = ls())
 
 # Set the current sample size and associated prefix for all graph and result
 #    file names
-N <- 80
+N <- 20
 max_N <- 200
 FilePrefix <- paste("N", N, "_", sep = "")
 
 # Now assign the focal species and the file paths for the stan models
+# These paths are within the "Box" folder (this file's location), and may need to be updated
+# to the user's file structure
 Focal <- 1
 PrelimStanPath <- "StanCode/Prelim_monoLambda_constAlpha.stan"
 FinalStanPath <- "StanCode/Final_monoLambda_constAlpha.stan"
@@ -94,73 +95,12 @@ traceplot(PrelimFit, pars = "lambdas")
 traceplot(PrelimFit, pars = "alpha_generic")
 traceplot(PrelimFit, pars = "alpha_intra")
 traceplot(PrelimFit, pars = "alpha_hat_ij")
-acf(PrelimPosteriors$alpha_generic[,1])
-acf(PrelimPosteriors$alpha_generic[,2])
-acf(PrelimPosteriors$alpha_intra[,1])
-acf(PrelimPosteriors$alpha_intra[,2])
+acf(PrelimPosteriors$alpha_generic)
+acf(PrelimPosteriors$alpha_intra)
 PlotSamples <- sample(1:S, size = 4, replace = FALSE)
-quartz()
 for(i in 1:4){
         acf(PrelimPosteriors$alpha_hat_ij[,PlotSamples[i]])
 }
-
-### PPC of prelim fits--not used anymore-----------
-########### Posterior Predictive Check
-# PostLength <- length(PrelimPosteriors$alpha_generic)
-# # calculate the posterior distributions of the interaction coefficients
-# alpha_ij <- matrix(NA, nrow = PostLength, ncol = S)
-# for(s in 1:S){
-#         alpha_ij[,s] <- exp(PrelimPosteriors$alpha_generic + PrelimPosteriors$alpha_hat_ij[,s])
-# }
-# alpha_intra <- exp(PrelimPosteriors$alpha_intra)
-# # calculate the posterior distributions of lambda_ei
-# lambda_ei <- matrix(NA, nrow = PostLength, ncol = N_ppc)
-# for(i in 1:N_ppc){
-#         lambda_ei[,i] <- exp(PrelimPosteriors$lambdas[,1] + PrelimPosteriors$lambdas[,2]*env_ppc[i])
-# }
-# 
-# # use the above quantities to calculate the posterior prediction intervals for the new data
-# Growth_pred <- matrix(data = NA, nrow = PostLength, ncol = N_ppc)
-# Growth_dev <- matrix(data = NA, nrow = PostLength, ncol = N_ppc)
-# for(i in 1:PostLength){
-#         for(j in 1:N_ppc){
-#                 SigmaTerm <- sum(alpha_ij[i,] * SpMatrix_ppc[j,]) + alpha_intra[i]*Nt_ppc[j]
-#                 Ntp1_pred <- Nt_ppc[j] * lambda_ei[i,j] / (1 + SigmaTerm)
-#                 Growth_pred[i,j] <- log((Ntp1_pred + 1)/Nt_ppc[j])
-#                 Growth_dev[i,j] <- Growth_pred[i,j] - Growth_ppc[j]
-#         }
-# }
-# 
-# # Calculate preliminary fit results for the ppc
-# PrelimPredVals <- matrix(data = NA, nrow = 3, ncol = N_ppc)
-# PrelimCIwidths <- rep(NA, N_ppc)
-# PrelimDevVals <- matrix(data = NA, nrow = 3, ncol = N_ppc)
-# for(i in 1:N_ppc){
-#      PrelimPredVals[1,i] <- mean(Growth_pred[,i], na.rm = TRUE)
-#      PrelimPredVals[2:3,i] <- HDInterval::hdi(Growth_pred[,i])
-#      PrelimCIwidths[i] <- PrelimPredVals[3,i] - PrelimPredVals[2,i]
-#      PrelimDevVals[1,i] <- mean(Growth_dev[,i], na.rm = TRUE)
-#      PrelimDevVals[2:3,i] <- HDInterval::hdi(Growth_dev[,i])
-# }
-# PrelimCIwidth <- mean(PrelimCIwidths)
-# 
-# # Calculate the accuracy of parameter estimates from the preliminary fits
-# PrelimLambdaEsts <- matrix(data = NA, nrow = 3, ncol = 2)
-# PrelimLambdaEsts[1,1] <- mean(PrelimPosteriors$lambdas[,1])
-# PrelimLambdaEsts[1,2] <- mean(PrelimPosteriors$lambdas[,2])
-# PrelimLambdaEsts[2:3,1] <- HDInterval::hdi(PrelimPosteriors$lambdas[,1])
-# PrelimLambdaEsts[2:3,2] <- HDInterval::hdi(PrelimPosteriors$lambdas[,2])
-# 
-# # Now calculate the alpha estimates
-# PrelimAlphaEsts <- matrix(data = NA, nrow = 3, ncol = S+1)
-# for(s in 1:S){
-#      AlphaDev <- alpha_ij[,s] - as.numeric(TrueAlphas[OtherSpecies[s]])
-#      PrelimAlphaEsts[1,s] <- mean(AlphaDev)
-#      PrelimAlphaEsts[2:3,s] <- HDInterval::hdi(AlphaDev)
-# }
-# IntraDev <- alpha_intra - TrueAlphas[Focal]
-# PrelimAlphaEsts[1,S+1] <- mean(IntraDev)
-# PrelimAlphaEsts[2:3,S+1] <- HDInterval::hdi(IntraDev)
 
 ### Final model -----------
 # Determine the parameters that should be included and run the final model
@@ -208,13 +148,10 @@ traceplot(FinalFit, pars = "alpha_hat_ij")
 # Double check the autocorrelation
 acf(FinalPosteriors$lambdas[,1])
 acf(FinalPosteriors$lambdas[,2])
-acf(FinalPosteriors$alpha_generic[,1])
-acf(FinalPosteriors$alpha_generic[,2])
-acf(FinalPosteriors$alpha_intra[,1])
-acf(FinalPosteriors$alpha_intra[,2])
+acf(PrelimPosteriors$alpha_generic)
+acf(PrelimPosteriors$alpha_intra)
 for(s in 1:S){
         if(Inclusion_ij[s] == 1){
-                quartz()
                 acf(FinalPosteriors$alpha_hat_ij[,s])
         }
 }
@@ -281,7 +218,6 @@ for(s in 1:S){
 }
 
 # Finally, calculate the "true" generic alpha that the model is attempting to estimate
-# alpha_generic * sigma(N) = sigma(N*alpha_ij)
 GenericIntercepts <- 1 - Inclusion_ij
 GenericIntercepts[Focal] <- 0
 TrueGenericIntercept <- log(sum(colSums(SpMatrix) * GenericIntercepts * exp(TrueAlphas)) / sum(colSums(SpMatrix) * GenericIntercepts))
@@ -291,134 +227,3 @@ FileName <- paste("StanFits/monoLambda_constAlpha/", FilePrefix, "GraphStuff.rda
 save(PredVals, Growth_ppc, LambdaEsts, AlphaEsts, Inclusion_ij,
      TrueGenericIntercept, 
      file = FileName)
-
-### Old figure code------------------
-# Plot the results from the ppc
-FigName <- paste("Results/monoLambda_constAlpha_test/", FilePrefix, "ppc.pdf", sep = "")
-Pred_yRange <- c(-2.5,2)
-Dev_yRange <- c(-1.2,1.2)
-xRange <- range(Growth_ppc)
-ppcCol <- "purple"
-pdf(file = FigName, width = 10, height = 6, onefile = FALSE, paper = "special")
-     #par(mar = c(5,4,2,2) + 0.1, mfrow = c(2,2))
-     # Upper left: Prelim ppc estimates
-     # plot(x = NA, y = NA, xlim = xRange, ylim = Pred_yRange, xlab = "",
-     #      ylab = "Predicted growth", las = 1)
-     # points(x = Growth_ppc, y = PrelimPredVals[1,], pch = 1, col = ppcCol)
-     # segments(x0 = Growth_ppc, y0 = PrelimPredVals[2,], x1 = Growth_ppc, y1 = PrelimPredVals[3,], col = ppcCol)
-     # abline(a = 0, b = 1, lty = 2)
-     # Message <- paste("CI width: ", round(PrelimCIwidth, digits = 2), sep = "")
-     # mtext(Message, side = 3, adj = 0.1, line = -1.5, col = ppcCol)
-     # mtext("Preliminary model fit", side = 3, line = 0.5)
-     # Upper right: Final ppc estimates
-     plot(x = NA, y = NA, xlim = xRange, ylim = Pred_yRange, xlab = "",
-          ylab = "", las = 1)
-     points(x = Growth_ppc, y = PredVals[1,], pch = 1, col = ppcCol)
-     segments(x0 = Growth_ppc, y0 = PredVals[2,], x1 = Growth_ppc, y1 = PredVals[3,], col = ppcCol)
-     abline(a = 0, b = 1, lty = 2)
-     #Message <- paste("CI width: ", round(FinalCIwidth, digits = 2), sep = "")
-     #mtext(Message, side = 3, adj = 0.1, line = -1.5, col = ppcCol)
-     mtext("Final model fit", side = 3, line = 0.5)
-dev.off()
-# 
-# # Plot the accuracy of lambda estimates
-# # Now create the lambda graph
-PrelimLambdaIntercept <- PrelimPosteriors$lambdas[,1]
-PrelimLambdaSlope <- PrelimPosteriors$lambdas[,2]
-FinalLambdaIntercept <- FinalPosteriors$lambdas[,1]
-FinalLambdaSlope <- FinalPosteriors$lambdas[,2]
-TrueLambdaIntercept <- TrueVals$lambda.mean[Focal]
-TrueLambdaSlope <- TrueVals$lambda.env[Focal]
-PrelimInterceptDeviation <- PrelimLambdaIntercept - TrueLambdaIntercept
-PrelimSlopeDeviation <- PrelimLambdaSlope - TrueLambdaSlope
-FinalInterceptDeviation <- FinalLambdaIntercept - TrueLambdaIntercept
-FinalSlopeDeviation <- FinalLambdaSlope - TrueLambdaSlope
-
-LambdaCol <- "forestgreen"
-InterceptRange <- c(-2, 4)
-SlopeRange <- c(-0.5, 0.5)
-FigName <- paste("Results/monoLambda_constAlpha/", FilePrefix, "lambdas.pdf", sep = "")
-pdf(file = FigName, width = 10, height = 6, onefile = FALSE, paper = "special")
-     par(mfrow = c(2,2), mar = c(5,4,2,2) + 0.1)
-     # Upper left: Prelim lambda intercept
-     plot(density(PrelimInterceptDeviation), main = "", xlab = "Intercept deviation",
-          col = LambdaCol, xlim = InterceptRange, las = 1)
-     abline(v = 0, lty = 2)
-     abline(v = hdi(PrelimInterceptDeviation), lty = 3, col = LambdaCol)
-     abline(v = mean(PrelimInterceptDeviation), lty = 1, col = LambdaCol)
-     mtext("Preliminary model fit", side = 3, line = 1)
-     # Upper right: Final lambda intercept
-     plot(density(FinalInterceptDeviation), main = "", xlab = "Intercept deviation",
-          col = LambdaCol, xlim = InterceptRange, las = 1)
-     abline(v = 0, lty = 2)
-     abline(v = hdi(FinalInterceptDeviation), lty = 3, col = LambdaCol)
-     abline(v = mean(FinalInterceptDeviation), lty = 1, col = LambdaCol)
-     mtext("Final model fit", side = 3, line = 1)
-     # Lower left: Prelim lambda slope
-     plot(density(PrelimSlopeDeviation), main = "", xlab = "Slope deviation",
-          col = LambdaCol, xlim = SlopeRange, las = 1)
-     abline(v = 0, lty = 2)
-     abline(v = hdi(PrelimSlopeDeviation), lty = 3, col = LambdaCol)
-     abline(v = mean(PrelimSlopeDeviation), lty = 1, col = LambdaCol)
-     # Lower right: Final lambda slope
-     plot(density(FinalSlopeDeviation), main = "", xlab = "Slope deviation",
-          col = LambdaCol, xlim = SlopeRange, las = 1)
-     abline(v = 0, lty = 2)
-     abline(v = hdi(FinalSlopeDeviation), lty = 3, col = LambdaCol)
-     abline(v = mean(FinalSlopeDeviation), lty = 1, col = LambdaCol)
-# dev.off()
-# 
-# # Now plot the alpha estimates versus the true values
-# xSeq <- 1:(S+1)
-# pchSeq <- c(rep(1,S), 16)
-# AlphaRange <- c(-0.02, 0.25)
-# Dark2Cols <- brewer.pal(n = 8, name = "Dark2")
-# estCols <- Dark2Cols[1:2]
-# FigName <- paste("Results/monoLambda_constAlpha/", FilePrefix, "alphas.pdf", sep = "")
-# pdf(file = FigName, width = 10, height = 3, onefile = FALSE, paper = "special")
-#      par(mar = c(5,4,2,2) + 0.1, mfrow = c(1,2), oma = c(0,2,0,0))
-#      # Preliminary fit results
-#      plot(x = NA, y = NA, xlim = c(1,S+1), ylim = AlphaRange,
-#           xlab = "", ylab = "", las = 1)
-#      points(x = xSeq, y = PrelimAlphaEsts[1,], col = estCols[1], pch = pchSeq)
-#      segments(x0 = xSeq, y0 = PrelimAlphaEsts[2,], x1 = xSeq, y1 = PrelimAlphaEsts[3,], col = estCols[1])
-#      abline(h = 0, lty = 2)
-#      mtext("Preliminary model fit", side = 3, line = 1)
-#      mtext("Alpha deviations", side = 2, line = 0.5, outer = TRUE, adj = 0.6)
-#      # Final fit results
-#      plot(x = NA, y = NA, xlim = c(1,S+1), ylim = AlphaRange,
-#           xlab = "", ylab = "", las = 1)
-#      points(x = xSeq, y = FinalAlphaEsts[1,], col = estCols[1], pch = pchSeq)
-#      segments(x0 = xSeq, y0 = FinalAlphaEsts[2,], x1 = xSeq, y1 = FinalAlphaEsts[3,], col = estCols[1])
-#      abline(h = 0, lty = 2)
-#      mtext("Final model fit", side = 3, line = 1)
-# 
-#      mtext("Species", side = 1, line = -2, outer = TRUE)     
-# dev.off()
-# 
-# # Finally, make a plot of the fixed parameter priors
-# LambdaIntercept <- rnorm(n = 10000, mean = 0, sd = 1)
-# LambdaSlope <- rnorm(n = 10000, mean = 0, sd = 1)
-# TransformedLambdaIntercept <- exp(LambdaIntercept)
-# 
-# AlphaIntercept <- rnorm(n = 10000, mean = -2, sd = 0.75)
-# AlphaSlope <- NULL
-# TransformedAlphaIntercept <- exp(AlphaIntercept)
-# 
-# FigName <- paste("Results/monoLambda_constAlpha/priors.pdf", sep = "")
-# pdf(file = FigName, width = 10, height = 6, onefile = FALSE, paper = "special")
-#      par(mar = c(5,4,2,2) + 0.1, mfrow = c(2,3))
-#      plot(density(LambdaIntercept), xlab = "Lambda intercept", ylab = "", main = "")
-#      plot(density(LambdaSlope), xlab = "Lambda slope", ylab = "", main = "")
-#      plot(density(TransformedLambdaIntercept), xlab = "exp(Lambda intercept)", ylab = "", main = "")
-#      
-#      plot(density(AlphaIntercept), xlab = "Generic alpha intercept", ylab = "", main = "")
-#      plot(NA, NA, xlab = "", ylab = "", main = "", xlim = c(0,1), ylim = c(0,1), axes = FALSE)
-#      plot(density(TransformedAlphaIntercept), xlab = "exp(Generic alpha intercept)", ylab = "", main = "")
-# dev.off()
-# 
-# which(Inclusion_ij == 1)
-# # Predicted non-generic competitors:
-# # Focal = 8
-# #    3, 6, 9, 15
-

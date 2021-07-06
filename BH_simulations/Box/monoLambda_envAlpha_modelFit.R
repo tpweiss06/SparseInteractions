@@ -4,25 +4,25 @@
 #    on 300 out of sample data points, calculate the deviance in parameter 
 #    estimates from the true values, and save it all for later plotting.
 
-# Species 1
-
-#setwd("~/Desktop/Wyoming/SparseInteractions/BH_simulations/")
-setwd("~/Documents/Work/Current Papers/SparseInteractions/BH_simulations/Box/")
+rm(list = ls())
 
 # Set the current sample size and associated prefix for all graph and result
 #    file names
 
-N <- 100
-
+N <- 50
 max_N <- 200
 FilePrefix <- paste("N", N, "_", sep = "")
 
 # Now assign the focal species and the file paths for the stan models
+# These paths are within the "Box" folder (this file's location), and may need to be updated
+# to the user's file structure
 Focal <- 1
 PrelimStanPath <- "StanCode/Prelim_monoLambda_envAlpha.stan"
 FinalStanPath <- "StanCode/Final_monoLambda_envAlpha.stan"
 
 # Load in the appropriate data
+# These paths are within the "Box" folder (this file's location), and may need to be updated
+# to the user's file structure
 FullSim <- read.csv("SimulationsDataFiles/simulation_perturb2.csv")
 TrueVals <- read.csv("SimulationsDataFiles/parameters_perturb2.csv")
 TrueAlphaMeans <- TrueVals$alpha.1
@@ -87,6 +87,11 @@ N <- 2*N
 PrelimFit <- stan(file = PrelimStanPath, data = PrelimDataVec, iter = 3000,
                   chains = 3, init = InitVals, control = list(adapt_delta = 0.99, max_treedepth = 15))
 PrelimPosteriors <- extract(PrelimFit)
+
+# Preliminary fit saved below (useful for comparing multiple runs or saving time later,
+# since each model fit can take some time to run)
+# These paths are within the "Box" folder (this file's location), and may need to be updated
+# to the user's file structure
 FitFileName <- paste("StanFits/monoLambda_envAlpha/", FilePrefix, "PrelimFit.rdata", sep = "")
 save(PrelimFit, PrelimPosteriors, file = FitFileName)
 
@@ -104,7 +109,6 @@ acf(PrelimPosteriors$alpha_generic[,2])
 acf(PrelimPosteriors$alpha_intra[,1])
 acf(PrelimPosteriors$alpha_intra[,2])
 PlotSamples <- sample(1:S, size = 4, replace = FALSE)
-quartz()
 par(mfrow = c(2,2))
 for(i in 1:4){
         acf(PrelimPosteriors$alpha_hat_ij[,PlotSamples[i]])
@@ -113,7 +117,6 @@ for(i in 1:4){
         acf(PrelimPosteriors$alpha_hat_eij[,PlotSamples[i]])
 }
 
-# load(FitFileName)
 # Determine the parameters that should be included and run the final model
 plot(PrelimFit, pars = "alpha_hat_ij")
 plot(PrelimFit, pars = "alpha_hat_eij")
@@ -135,8 +138,8 @@ for(s in 1:S){
              Inclusion_eij[s] <- 0
      }
 }
-Inclusion_ij
-Inclusion_eij
+Inclusion_ij # intercept alpha_ij parameters to include
+Inclusion_eij # slope alpha_eij parameters to include
 
 # Reset initial conditions to allow faster fitting
 ChainInitials <- list(lambdas = colMeans(PrelimPosteriors$lambdas), 
@@ -153,6 +156,11 @@ InitVals <- list(ChainInitials, ChainInitials, ChainInitials)
 FinalFit <- stan(file = FinalStanPath, data = FinalDataVec, iter = 3000,
                  chains = 3, init = InitVals, control = list(adapt_delta = 0.9))
 Posteriors <- extract(FinalFit)
+
+# Final fit saved below (useful for comparing multiple runs or saving time later,
+# since each model fit can take some time to run)
+# These paths are within the "Box" folder (this file's location), and may need to be updated
+# to the user's file structure
 FitFileName <- paste("StanFits/monoLambda_envAlpha/", FilePrefix, "FinalFit.rdata", sep = "")
 save(FinalFit, Posteriors, Inclusion_ij, Inclusion_eij, file = FitFileName)
 
@@ -177,11 +185,9 @@ acf(Posteriors$alpha_intra[,1])
 acf(Posteriors$alpha_intra[,2])
 for(s in 1:S){
         if(Inclusion_ij[s] == 1){
-                quartz()
                 acf(Posteriors$alpha_hat_ij[,s])
         }
         if(Inclusion_eij[s] == 1){
-                quartz()
                 acf(Posteriors$alpha_hat_eij[,s])
         }
 }
@@ -261,6 +267,10 @@ Totals <- colSums(SpMatrix) * GenericSlopes
 TrueGenericSlope <- mean(TrueAlphaSlopes*GenericSlopes*(Totals/max(Totals)))
 
 # Finally, save all the necessary results for the figures
+# (saving these is useful for comparing multiple runs or saving time later,
+# since each model fit can take some time to run)
+# These paths are within the "Box" folder (this file's location), and may need to be updated
+# to the user's file structure
 FileName <- paste("StanFits/monoLambda_envAlpha/", FilePrefix, "GraphStuff.rdata", sep = "")
 save(PredVals, Growth_ppc, LambdaEsts, AlphaEsts, Inclusion_eij, Inclusion_ij,
      TrueGenericIntercept, TrueGenericSlope,

@@ -3,9 +3,7 @@
 #    of dataset sizes (10, 20, 50, 100, 200), and then examine the accuracy of
 #    parameter estimates and posterior predictive checks on 300 out of sample
 #    data points.
-
-#setwd("~/Desktop/Wyoming/SparseInteractions/BH_simulations/")
-setwd("~/Documents/Work/Current Papers/SparseInteractions/BH_simulations/Box/")
+rm(list = ls())
 
 # Set the current sample size and associated prefix for all graph and result
 #    file names
@@ -26,6 +24,7 @@ TrueLambdaOpt <- TrueVals$z.env[Focal]
 TrueLambdaMax <- TrueVals$lambda.max[Focal]
 TrueLambdaWidth <- TrueVals$sigma.env[Focal]
 
+
 # Load necessary libraries
 library(rstan)
 library(HDInterval)
@@ -40,6 +39,8 @@ Intra[Focal] <- 1
 tau0 <- 1
 slab_df <- 4
 slab_scale <- sqrt(2)
+AllSpecies <- 1:S
+OtherSpecies <- AllSpecies[-Focal]
 
 # Set initial values to avoid initial problems with the random number generator
 ChainInitials <- list(lambda_max = 1, lambda_opt = 0, lambda_width = 0.5, 
@@ -91,7 +92,6 @@ FitFileName <- paste("StanFits/optLambda_constAlpha/", FilePrefix, "PrelimFit.rd
 save(PrelimFit, PrelimPosteriors, file = FitFileName)
 
 # Examine diagnostics and determine if parameters of model run should be updated
-# quartz()
 pairs(PrelimFit, pars = c("lambda_opt", "lambda_max", "lambda_width", "alpha_generic", "alpha_intra"))
 hist(summary(PrelimFit)$summary[,"Rhat"])
 hist(summary(PrelimFit)$summary[,"n_eff"])
@@ -197,20 +197,19 @@ FitFileName <- paste("StanFits/optLambda_constAlpha/", FilePrefix, "FinalFit.rda
 save(FinalFit, FinalPosteriors, Inclusion_ij, file = FitFileName)
 
 # Examine diagnostics and determine if parameters of model run should be updated
-# quartz()
-# pairs(FinalFit, pars = c("lambda_opt", "lambda_max", "lambda_width", "alpha_generic", "alpha_intra"))
-# hist(summary(FinalFit)$summary[,"Rhat"])
-# hist(summary(FinalFit)$summary[,"n_eff"])
-# traceplot(FinalFit, pars = c("lambda_opt", "lambda_max", "lambda_width", "alpha_generic", "alpha_intra"))
-# which(Inclusion_ij == 1)
-# traceplot(FinalFit, pars = "alpha_hat_ij")
-# 
-# # Double check the autocorrelation in a few potentially suspect traceplots
-# acf(FinalPosteriors$alpha_intra)
-# acf(FinalPosteriors$alpha_generic)
-# acf(FinalPosteriors$lambda_opt)
-# acf(FinalPosteriors$lambda_max)
-# acf(FinalPosteriors$lambda_width)
+ pairs(FinalFit, pars = c("lambda_opt", "lambda_max", "lambda_width", "alpha_generic", "alpha_intra"))
+ hist(summary(FinalFit)$summary[,"Rhat"])
+ hist(summary(FinalFit)$summary[,"n_eff"])
+ traceplot(FinalFit, pars = c("lambda_opt", "lambda_max", "lambda_width", "alpha_generic", "alpha_intra"))
+ which(Inclusion_ij == 1)
+ traceplot(FinalFit, pars = "alpha_hat_ij")
+ 
+ # Double check the autocorrelation in a few potentially suspect traceplots
+ acf(FinalPosteriors$alpha_intra)
+ acf(FinalPosteriors$alpha_generic)
+ acf(FinalPosteriors$lambda_opt)
+ acf(FinalPosteriors$lambda_max)
+ acf(FinalPosteriors$lambda_width)
 
 ########### Posterior Predictive Check
 PostLength <- length(FinalPosteriors$alpha_generic)
@@ -275,124 +274,4 @@ IntraDev <- alpha_intra - TrueAlphas[Focal]
 FinalAlphaEsts[1,S+1] <- mean(IntraDev)
 FinalAlphaEsts[2:3,S+1] <- HDInterval::hdi(IntraDev)
 
-# Plot the results from the ppc
-FigName <- paste("Results/optLambda_constAlpha/", FilePrefix, "ppc.pdf", sep = "")
-Pred_yRange <- c(-2, 2)
-Dev_yRange <- c(-1.75, 1.75)
-xRange <- range(Growth_ppc)
-ppcCol <- "purple"
-pdf(file = FigName, width = 10, height = 6, onefile = FALSE, paper = "special")
-     # Upper right: Final ppc estimates
-     plot(x = NA, y = NA, xlim = xRange, ylim = Pred_yRange, xlab = "",
-          ylab = "", las = 1)
-     points(x = Growth_ppc, y = FinalPredVals[1,], pch = 1, col = ppcCol)
-     segments(x0 = Growth_ppc, y0 = FinalPredVals[2,], x1 = Growth_ppc, y1 = FinalPredVals[3,], col = ppcCol)
-     abline(a = 0, b = 1, lty = 2)
-     Message <- paste("CI width: ", round(FinalCIwidth, digits = 2), sep = "")
-     mtext(Message, side = 3, adj = 0.1, line = -1.5, col = ppcCol)
-     mtext("Final model fit", side = 3, line = 0.5)
-dev.off()
-
-# Plot the accuracy of lambda estimates
-LambdaCol <- "forestgreen"
-OptimumRange <- c(-1, 1)
-MaxRange <- c(-5, 25)
-WidthRange <- c(-0.5, 0.5)
-FigName <- paste("Results/optLambda_constAlpha/", FilePrefix, "lambdas.pdf", sep = "")
-pdf(file = FigName, width = 10, height = 6, onefile = FALSE, paper = "special")
-    # par(mfrow = c(2,3), mar = c(5,4,2,2) + 0.1, oma = c(0, 2, 0, 0))
-     # # Upper left: Prelim lambda optimum
-     # plot(density(PrelimLambdaDevs[,1]), main = "", xlab = "", 
-     #      col = LambdaCol, xlim = OptimumRange, las = 1)
-     # abline(v = 0, lty = 2)
-     # abline(v = hdi(PrelimLambdaDevs[,1]), lty = 3, col = LambdaCol)
-     # abline(v = mean(PrelimLambdaDevs[,1]), lty = 1, col = LambdaCol)
-     # mtext("Preliminary model fit", side = 2, line = 4.5)
-     # # Upper middle: Prelim lambda maximum
-     # plot(density(PrelimLambdaDevs[,2]), main = "", xlab = "", 
-     #      col = LambdaCol, xlim = MaxRange, las = 1)
-     # abline(v = 0, lty = 2)
-     # abline(v = hdi(PrelimLambdaDevs[,2]), lty = 3, col = LambdaCol)
-     # abline(v = mean(PrelimLambdaDevs[,2]), lty = 1, col = LambdaCol)
-     # # Upper left: Prelim lambda width
-     # plot(density(PrelimLambdaDevs[,3]), main = "", xlab = "", 
-     #      col = LambdaCol, xlim = WidthRange, las = 1)
-     # abline(v = 0, lty = 2)
-     # abline(v = hdi(PrelimLambdaDevs[,3]), lty = 3, col = LambdaCol)
-     # abline(v = mean(PrelimLambdaDevs[,3]), lty = 1, col = LambdaCol)
-     # Lower left: Final lambda optimum
-     plot(density(FinalLambdaDevs[,1]), main = "", xlab = "Optimum deviation", 
-          col = LambdaCol, xlim = OptimumRange, las = 1)
-     abline(v = 0, lty = 2)
-     abline(v = hdi(FinalLambdaDevs[,1]), lty = 3, col = LambdaCol)
-     abline(v = mean(FinalLambdaDevs[,1]), lty = 1, col = LambdaCol)
-     mtext("Final model fit", side = 2, line = 4.5)
-     # Lower middle: Final lambda maximum
-     plot(density(FinalLambdaDevs[,2]), main = "", xlab = "Maximum deviation", 
-          col = LambdaCol, xlim = MaxRange, las = 1)
-     abline(v = 0, lty = 2)
-     abline(v = hdi(FinalLambdaDevs[,2]), lty = 3, col = LambdaCol)
-     abline(v = mean(FinalLambdaDevs[,2]), lty = 1, col = LambdaCol)
-     # Lower left: Final lambda width
-     plot(density(FinalLambdaDevs[,3]), main = "", xlab = "Width deviation", 
-          col = LambdaCol, xlim = WidthRange, las = 1)
-     abline(v = 0, lty = 2)
-     abline(v = hdi(FinalLambdaDevs[,3]), lty = 3, col = LambdaCol)
-     abline(v = mean(FinalLambdaDevs[,3]), lty = 1, col = LambdaCol)
-dev.off()
-
-# Now plot the alpha estimates versus the true values
-xSeq <- 1:(S+1)
-pchSeq <- c(rep(1,S), 16)
-AlphaRange <- c(-0.02, 0.15)
-Dark2Cols <- brewer.pal(n = 8, name = "Dark2")
-estCols <- Dark2Cols[1:2]
-FigName <- paste("Results/optLambda_constAlpha/", FilePrefix, "alphas.pdf", sep = "")
-pdf(file = FigName, width = 10, height = 3, onefile = FALSE, paper = "special")
-     par(mar = c(5,4,2,2) + 0.1, mfrow = c(1,2), oma = c(0,2,0,0))
-     # Preliminary fit results
-     plot(x = NA, y = NA, xlim = c(1,S+1), ylim = AlphaRange,
-          xlab = "", ylab = "", las = 1)
-     points(x = xSeq, y = PrelimAlphaEsts[1,], col = estCols[1], pch = pchSeq)
-     segments(x0 = xSeq, y0 = PrelimAlphaEsts[2,], x1 = xSeq, y1 = PrelimAlphaEsts[3,], col = estCols[1])
-     abline(h = 0, lty = 2)
-     mtext("Preliminary model fit", side = 3, line = 1)
-     mtext("Alpha deviations", side = 2, line = 0.5, outer = TRUE, adj = 0.6)
-     # Final fit results
-     plot(x = NA, y = NA, xlim = c(1,S+1), ylim = AlphaRange,
-          xlab = "", ylab = "", las = 1)
-     points(x = xSeq, y = FinalAlphaEsts[1,], col = estCols[1], pch = pchSeq)
-     segments(x0 = xSeq, y0 = FinalAlphaEsts[2,], x1 = xSeq, y1 = FinalAlphaEsts[3,], col = estCols[1])
-     abline(h = 0, lty = 2)
-     mtext("Final model fit", side = 3, line = 1)
-
-     mtext("Species", side = 1, line = -2, outer = TRUE)     
-dev.off()
-
-# Finally, make a plot of the fixed parameter priors
-# LambdaOpt <- rnorm(n = 10000, mean = 0, sd = 1)
-# LambdaMax <- rnorm(n = 10000, mean = 0, sd = 7.5)
-# LambdaWidth <- rnorm(n = 10000, mean = 0, sd = 1)
-# 
-# AlphaIntercept <- rnorm(n = 10000, mean = -2, sd = 0.75)
-# AlphaSlope <- NULL
-# TransformedAlphaIntercept <- exp(AlphaIntercept)
-# 
-# FigName <- paste("Results/optLambda_constAlpha/priors.pdf", sep = "")
-# pdf(file = FigName, width = 10, height = 6, onefile = FALSE, paper = "special")
-#      par(mar = c(5,4,2,2) + 0.1, mfrow = c(2,3))
-#      plot(density(LambdaOpt), xlab = "Lambda optimum", ylab = "", main = "")
-#      plot(density(LambdaMax), xlab = "Lambda maximum", ylab = "", main = "", xlim = c(0, 30))
-#      plot(density(LambdaWidth), xlab = "Lambda width", ylab = "", main = "", xlim = c(0, 4))
-#      
-#      plot(density(AlphaIntercept), xlab = "Generic alpha intercept", ylab = "", main = "")
-#      plot(NA, NA, xlab = "", ylab = "", main = "", xlim = c(0,1), ylim = c(0,1), axes = FALSE)
-#      plot(density(TransformedAlphaIntercept), xlab = "exp(Generic alpha intercept)", ylab = "", main = "")
-# dev.off()
-
-which(Inclusion_ij == 1)
-# Predicted non-generic competitors:
-# Focal = 8
-#    5, 9, 13, 14 (original)
-#    5, 8, 12, 13 (after accounting for removing the focal species)
 
