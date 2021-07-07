@@ -4,36 +4,30 @@
 #    on 300 out of sample data points, calculate the deviance in parameter 
 #    estimates from the true values, and save it all for later plotting.
 
-# Species 1
-
-setwd("~/Desktop/Wyoming/SparseInteractions/BH_simulations/Main/")
-#setwd("~/Documents/Work/Current Papers/SparseInteractions/BH_simulations/")
+rm(list = ls())
+library(here)
+library(HDInterval)
+library(RColorBrewer)
+library(rstan)
+options(mc.cores = parallel::detectCores())
+rstan_options(auto_write = TRUE)
 
 # Set the current sample size and associated prefix for all graph and result
 #    file names
-
 N <- 100
-
 max_N <- 200
 FilePrefix <- paste("N", N, "_", sep = "")
 
 # Now assign the focal species and the file paths for the stan models
 Focal <- 1
-PrelimStanPath <- "StanCode/Prelim_monoLambda_envAlpha.stan"
-FinalStanPath <- "StanCode/Final_monoLambda_envAlpha.stan"
+PrelimStanPath <- here("BH_simulations/Main/StanCode/Prelim_monoLambda_envAlpha.stan")
+FinalStanPath <- here("BH_simulations/Main/StanCode/Final_monoLambda_envAlpha.stan")
 
 # Load in the appropriate data
-FullSim <- read.csv("SimulationsDataFiles/simulation_perturb2.csv")
-TrueVals <- read.csv("SimulationsDataFiles/parameters_perturb2.csv")
+FullSim <- read.csv(here("BH_simulations/Main/SimulationsDataFiles/simulation_perturb.csv"))
+TrueVals <- read.csv(here("BH_simulations/Main/SimulationsDataFiles/parameters_perturb.csv"))
 TrueAlphaMeans <- TrueVals$alpha.1
 TrueAlphaSlopes <- TrueVals$alpha.env.gen + TrueVals$alpha.env.spec
-
-# Load necessary libraries
-library(rstan)
-library(HDInterval)
-library(RColorBrewer)
-options(mc.cores = parallel::detectCores())
-rstan_options(auto_write = TRUE)
 
 # assign some universal values to be used across model fits and graphs
 S <- 15
@@ -87,18 +81,21 @@ N <- 2*N
 PrelimFit <- stan(file = PrelimStanPath, data = PrelimDataVec, iter = 3000,
                   chains = 3, init = InitVals, control = list(adapt_delta = 0.99, max_treedepth = 15))
 PrelimPosteriors <- extract(PrelimFit)
-FitFileName <- paste("StanFits/monoLambda_envAlpha/", FilePrefix, "PrelimFit_b.rdata", sep = "")
-save(PrelimFit, PrelimPosteriors, file = FitFileName)
 
-# Examine diagnostics and determine if parameters of model run should be updated
-pairs(PrelimFit, pars = c("lambdas", "alpha_generic", "alpha_intra"))
+# Examine diagnostic plots and determine if the model fit is adequate to move
+#       forward with the final fit
+# First examine the distribution of Rhat and effective sample size values
 hist(summary(PrelimFit)$summary[,"Rhat"])
 hist(summary(PrelimFit)$summary[,"n_eff"])
+# Visually examine the traceplots for key parameters
 traceplot(PrelimFit, pars = "lambdas")
 traceplot(PrelimFit, pars = "alpha_generic")
 traceplot(PrelimFit, pars = "alpha_intra")
 traceplot(PrelimFit, pars = "alpha_hat_ij")
 traceplot(PrelimFit, pars = "alpha_hat_eij")
+# Check for parameter correlations and divergent transitions
+pairs(PrelimFit, pars = c("lambdas", "alpha_generic", "alpha_intra"))
+# Check for autocorrelation in key parameters
 acf(PrelimPosteriors$alpha_generic[,1])
 acf(PrelimPosteriors$alpha_generic[,2])
 acf(PrelimPosteriors$alpha_intra[,1])
@@ -113,11 +110,11 @@ for(i in 1:4){
         acf(PrelimPosteriors$alpha_hat_eij[,PlotSamples[i]])
 }
 
-# load(FitFileName)
-# Determine the parameters that should be included and run the final model
-plot(PrelimFit, pars = "alpha_hat_ij")
-plot(PrelimFit, pars = "alpha_hat_eij")
-
+#### If the diagnostic plots don't reveal any problems wiht the model fit, now
+#       move on to determining which parameters warrant inclusion in the final
+#       model (i.e. the data pulled their posteriors away from 0). The final model
+#       will then be run with only these species-specific parameters, but without
+#       the regularized horseshoe priors.
 Inclusion_ij <- rep(0, S)
 Inclusion_eij <- rep(0, S)
 IntLevel <- 0.5
@@ -138,7 +135,7 @@ for(s in 1:S){
 Inclusion_ij
 Inclusion_eij
 
-# Reset initial conditions to allow faster fitting
+# Reset initial conditions with values from the preliminary fit
 ChainInitials <- list(lambdas = colMeans(PrelimPosteriors$lambdas), 
                       alpha_generic_tilde = colMeans(PrelimPosteriors$alpha_generic_tilde), 
                       alpha_hat_ij_tilde = colMeans(PrelimPosteriors$alpha_hat_ij_tilde), 
@@ -153,10 +150,9 @@ InitVals <- list(ChainInitials, ChainInitials, ChainInitials)
 FinalFit <- stan(file = FinalStanPath, data = FinalDataVec, iter = 3000,
                  chains = 3, init = InitVals, control = list(adapt_delta = 0.9))
 Posteriors <- extract(FinalFit)
-FitFileName <- paste("StanFits/monoLambda_envAlpha/", FilePrefix, "FinalFit_b.rdata", sep = "")
-save(FinalFit, Posteriors, Inclusion_ij, Inclusion_eij, file = FitFileName)
 
-# Examine diagnostics and determine if parameters of model run should be updated
+# Examine the same diagnostic plots as before to check for problems with the 
+#       final model fit
 pairs(FinalFit, pars = c("lambdas", "alpha_generic", "alpha_intra"))
 hist(summary(FinalFit)$summary[,"Rhat"])
 hist(summary(FinalFit)$summary[,"n_eff"])
@@ -186,7 +182,13 @@ for(s in 1:S){
         }
 }
 
-########### Posterior Predictive Check
+# If the fit looks good, safe the final output here
+FitFileName <- paste(here("BH_simulations/Main/StanFits/"), FilePrefix, "FinalFit.rdata", sep = "")
+save(FinalFit, Posteriors, Inclusion_ij, Inclusion_eij, file = FitFileName)
+
+
+########### Now calculate the values for the posterior predictive check and other 
+#       assessments of parameter accuracy
 PostLength <- length(Posteriors$alpha_generic[,1])
 # calculate the posterior distributions of the interaction coefficients and lambdas
 alpha_eij <- array(NA, dim = c(PostLength, N_ppc, S))
@@ -261,7 +263,7 @@ Totals <- colSums(SpMatrix) * GenericSlopes
 TrueGenericSlope <- mean(TrueAlphaSlopes*GenericSlopes*(Totals/max(Totals)))
 
 # Finally, save all the necessary results for the figures
-FileName <- paste("StanFits/monoLambda_envAlpha/", FilePrefix, "GraphStuff.rdata", sep = "")
+FileName <- paste(here("BH_simulations/Main/StanFits/"), FilePrefix, "GraphStuff.rdata", sep = "")
 save(PredVals, Growth_ppc, LambdaEsts, AlphaEsts, Inclusion_eij, Inclusion_ij,
      TrueGenericIntercept, TrueGenericSlope,
      file = FileName)

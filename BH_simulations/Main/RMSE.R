@@ -1,12 +1,13 @@
 # calculate the root mean squared error (RMSE) for our growth predictions and
 #       lambda, intra, and generic terms
 
-setwd("~/Desktop/Wyoming/SparseInteractions/BH_simulations/Main/")
+rm(list = ls())
+library(here)
 
 # Get the data needed for the ppc calculations
 Focal <- 1
-FullSim <- read.csv("Simulations/simulation_perturb2.csv")
-TrueVals <- read.csv("Simulations/parameters_perturb2.csv")
+FullSim <- read.csv(here("BH_simulations/Main/SimulationsDataFiles/simulation_perturb.csv"))
+TrueVals <- read.csv(here("BH_simulations/Main/SimulationsDataFiles/parameters_perturb.csv"))
 max_N <- 200
 S <- 15
 ppc_data <- subset(FullSim, (species == Focal) & (run > max_N) & (time == 0) & (thinned == 0))
@@ -23,11 +24,11 @@ Ntp1_ppc <- subset(FullSim, (species == Focal) & (run %in% ppc_runs) & (time == 
 Growth_ppc <- log((Ntp1_ppc + 1)/Nt_ppc)
 
 # load in the final fit
-load("StanFits/monoLambda_envAlpha/N10_FinalFit.rdata")
+load(here("BH_simulations/Main/StanFits/N10_FinalFit.rdata"))
 Post10 <- Posteriors
-load("StanFits/monoLambda_envAlpha/N50_FinalFit.rdata")
+load(here("BH_simulations/Main/StanFits/N50_FinalFit.rdata"))
 Post50 <- Posteriors
-load("StanFits/monoLambda_envAlpha/N200_FinalFit.rdata")
+load(here("BH_simulations/Main/StanFits/N200_FinalFit.rdata"))
 Post200 <- Posteriors
 
 # Calculate the posterior growth predictions
@@ -70,15 +71,15 @@ for(n in 1:3){
 # load in the true values from the graph stuff data
 TrueGenericInterceptVals <- rep(NA, 3)
 TrueGenericSlopeVals <- rep(NA, 3)
-load("StanFits/monoLambda_envAlpha/N10_GraphStuff.rdata")
+load(here("BH_simulations/Main/StanFits/N10_GraphStuff.rdata"))
 TrueGenericInterceptVals[1] <- TrueGenericSlope
 TrueGenericSlopeVals[1] <- TrueGenericSlope
 rm(LambdaEsts, PredVals, AlphaEsts, Inclusion_eij, Inclusion_ij)
-load("StanFits/monoLambda_envAlpha/N50_GraphStuff.rdata")
+load(here("BH_simulations/Main/StanFits/N50_GraphStuff.rdata"))
 TrueGenericInterceptVals[2] <- TrueGenericSlope
 TrueGenericSlopeVals[2] <- TrueGenericSlope
 rm(LambdaEsts, PredVals, AlphaEsts, Inclusion_eij, Inclusion_ij)
-load("StanFits/monoLambda_envAlpha/N200_GraphStuff.rdata")
+load(here("BH_simulations/Main/StanFits/N200_GraphStuff.rdata"))
 TrueGenericInterceptVals[3] <- TrueGenericSlope
 TrueGenericSlopeVals[3] <- TrueGenericSlope
 rm(LambdaEsts, PredVals, AlphaEsts, Inclusion_eij, Inclusion_ij)
