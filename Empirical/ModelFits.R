@@ -5,6 +5,8 @@
 rm(list = ls())
 library(rstan)
 library(here)
+options(mc.cores = parallel::detectCores())
+rstan_options(auto_write = TRUE)
 
 FocalLetter <- "W" # "W" or "A"
 FocalPrefix <- "WAAC" # "Waitzia" or "ARCA"
@@ -23,7 +25,7 @@ SpDataFocal <- subset(SpData, Focal.sp.x == FocalLetter)
 # Next continue to extract the data needed to run the model. 
 N <- as.integer(nrow(SpDataFocal))
 Fecundity <- as.integer(SpDataFocal$Number.flowers.total)
-reserve <- as.integer(SpDataFocal$Reserve.x)
+reserve <- as.integer(as.factor(SpDataFocal$Reserve.x))
 env <- as.vector(scale(SpDataFocal[,EnvCol]))
 
 # Now calculate the total number of species to use for the model, discounting
@@ -45,13 +47,11 @@ for(s in 1:ncol(AllSpAbunds)){
 SpNames <- AllSpNames[SpToKeep]
 Intra <- ifelse(SpNames == FocalSpecies, 1, 0)
 
-# load rstan, set the parameters for the Finnish Horseshoe, and create a vector
-#       of all the data objects needed for the model
-options(mc.cores = parallel::detectCores())
-rstan_options(auto_write = TRUE)
-tau0 <- 2
-slab_scale <- 1
-slab_df <- 2*S - 1
+# Set the parameters defining the regularized horseshoe prior, as described in
+#       the "Incorporating sparsity-inducing priors" section of the manuscript.
+tau0 <- 1
+slab_scale <- sqrt(2)
+slab_df <- 4
 DataVec <- c("N", "S", "Fecundity", "reserve", "SpMatrix", "env", "Intra", "tau0", "slab_scale", "slab_df")
 
 # Now run a perliminary fit of the model to assess parameter shrinkage

@@ -51,12 +51,16 @@ for(i in 1:EnvLength){
 }
 rm(PhosPost, ShadePost)
 
-# Now, calculate the alpha values to plot for both environmental variables
+# Create objects to hold the mean and credible interval values for the intraspecific
+#  and generic alpha values
 GenericPlot <- array(NA, dim = c(2,3,EnvLength))
 IntraPlot <- array(NA, dim = c(2,3,EnvLength))
 
-# Now set the species that deviate from the generic
+# Create an object to hold the alpha values for any species identified by the sparse
+#  modeling approach as deviating from the generic value
 SpecificPlot <- array(NA, dim = c(2,2, 3, EnvLength))
+
+# Create appropriate legends with the names for any deviating species
 # Hyalosperma glutinosum and Schoenus nanus for phosphorous
 PhosLegend <- c("Generic", "Intraspecific",
                expression(paste(italic("H. glutinosum"), " (Perenjori)", sep = "")), 
@@ -65,13 +69,17 @@ PhosLegend <- c("Generic", "Intraspecific",
 ShadeLegend <- c("Generic", "Intraspecific",
                expression(paste(italic("H. glabra"), " (Bendering)", sep = "")))
 
-
+# Now calculate the alpha_e,i,j values for intraspecific alphas (IntraPlot), any heterospecifics that
+#  affect the focal species as an average heterospecific neighbor (GenericPlot), and for any species
+#  that differ from that generic heterospecific effect (SpecificPlot)
 for(i in 1:EnvLength){
      # First phosphorous
+     # Calculate the posterior distribution for the relevant alpha_e,i,j at this particular environmental value
      GenericPost <- exp(Phos$Post$alpha_generic[,1] + Phos$Post$alpha_generic[,2] * PlotPhos[i])
      Sp1Post <- exp(Phos$Post$alpha_generic[,1] + Phos$Post$alpha_hat_ij[,2,17] + Phos$Post$alpha_generic[,2] * PlotPhos[i])
      Sp2Post <- exp(Phos$Post$alpha_generic[,1] + Phos$Post$alpha_hat_ij[,1,37] + Phos$Post$alpha_generic[,2] * PlotPhos[i])
      IntraPost <- exp(Phos$Post$alpha_intra[,1] + Phos$Post$alpha_intra[,2] * PlotPhos[i])
+     # Now store the mean and 95% CI for these posteriors
      GenericPlot[1,1,i] <- mean(GenericPost)
      GenericPlot[1,2:3,i] <- HDInterval::hdi(GenericPost)
      IntraPlot[1,1,i] <- mean(IntraPost)
@@ -81,7 +89,7 @@ for(i in 1:EnvLength){
      SpecificPlot[1,2,1,i] <- mean(Sp2Post)
      SpecificPlot[1,2,2:3,i] <- HDInterval::hdi(Sp2Post)
      
-     # Now shade
+     # Now shade, calculated in the same way as for phosphorous
      GenericPost <- exp(Shade$Post$alpha_generic[,1] + Shade$Post$alpha_generic[,2] * PlotShade[i])
      Sp1Post <- exp(Shade$Post$alpha_generic[,1] + Shade$Post$alpha_hat_ij[,1,19] + Shade$Post$alpha_generic[,2] * PlotShade[i])
      IntraPost <- exp(Shade$Post$alpha_intra[,1] + Shade$Post$alpha_intra[,2] * PlotShade[i])

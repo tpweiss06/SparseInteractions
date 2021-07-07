@@ -2,13 +2,14 @@
 // 	following the stan implementation demonstrated on https://betanalpha.github.io/assets/case_studies/bayes_sparse_regression.html
 
 data{
-  int<lower = 1> N;
-  int<lower = 1> S;
-  int Fecundity[N];
-  int reserve[N];
-  matrix[N,S] SpMatrix;
-  vector[N] env;
-  int<lower = 0> Intra[S];
+  int<lower = 1> N; // Number of plots
+  int<lower = 1> S; // Number of species
+  int Fecundity[N]; // Fecundity of the focal species in each plot
+  int reserve[N];   // Indicator variable for the reserve each plot is located in
+  matrix[N,S] SpMatrix; // Matrix of abundances for each species (including abundances of non-focal individuals of the focal species)
+  vector[N] env;   // Environmental values for each plot
+  int<lower = 0> Intra[S]; // Indicator boolean variable to identify the focal species (0 for non-focal and 1 for focal). Included for easier calculations
+  // The below values define the regularized horseshoe priors used for species-specific parameters
   real tau0; 		// determines the scale of the global shrinkage parameter (tau)
   real slab_scale;	// scale for significant alpha_sp values
   real slab_df;		// effective degrees of freedom for significant alpha_sp values
