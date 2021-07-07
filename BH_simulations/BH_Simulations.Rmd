@@ -10,6 +10,7 @@ output:
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
+library(here)
 ```
 
 Code used to generate simulated communities for the manuscript "Disentangling key species interactions in diverse and heterogeneous communities: A Bayesian sparse modeling approach"
@@ -266,7 +267,7 @@ if(lambda.optimum == TRUE){
 
 Alternative to the above three sections: Reading in a coefficient dataframe with lambdas and alphas (would still need to run first section to set environmental conditions in the plots)
 ```{r df-read, eval=FALSE}
-# df.coef <- read.csv("parameters_test_5.csv")
+# df.coef <- read.csv(here("BH_simulations/Box/SimulationsDataFiles/parameters_test_5.csv"))
 
 # for constant alpha-environment
 #df.coef$alpha.env.gen <- 0
@@ -305,7 +306,7 @@ ggplot(filter(df.eq, run < 21), aes(x = time, y = pop, color = species)) +
   xlab('Timestep') + 
   ylab('Population')
 
-# ggsave('warmup_x.pdf', width = 6, height = 4, units = 'in')
+# ggsave(here('BH_simulations/Box/warmup_x.pdf', width = 6, height = 4, units = 'in')
 
 ```
 
@@ -373,9 +374,9 @@ if(thinned == TRUE){
 
 ### Storing the output
 ```{r env-storing, eval=FALSE}
-# write.csv(df.coef, file = "parameters_x.csv")
-# write.csv(df.result, file = "simulation_x.csv")
-# write.csv(df.eq, file = 'warmup_x.csv')
+# write.csv(df.coef, file = here("BH_simulations/Box/SimulationsDataFiles/parameters_x.csv"))
+# write.csv(df.result, file = here("BH_simulations/Box/SimulationsDataFiles/simulation_x.csv"))
+# write.csv(df.eq, file = here('BH_simulations/Box/SimulationsDataFiles/warmup_x.csv')
 
 ```
 
