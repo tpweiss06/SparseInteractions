@@ -2,7 +2,9 @@
 #       environmental covariate. A separate script will then make the empirical
 #       figures for the manuscript
 
-setwd("~/Desktop/Wyoming/SparseInteractions/Empirical/")
+rm(list = ls())
+library(rstan)
+library(here)
 
 FocalLetter <- "W" # "W" or "A"
 FocalPrefix <- "WAAC" # "Waitzia" or "ARCA"
@@ -12,7 +14,7 @@ EnvCov <- "Phos" # "Phos" or "Shade"
 EnvCol <- 71  # 72 for Canopy or 71 for Phosphorous
 
 # Load in the data and subset out the current focal species.
-SpData <- read.csv("water_full_env.csv")
+SpData <- read.csv(here("Empirical/water_full_env.csv"))
 SpData <- subset(SpData, select = -c(X.NA., Seedcount.extrapolated.integer))
 SpData <- na.omit(SpData) 
 FocalLetter
@@ -45,7 +47,6 @@ Intra <- ifelse(SpNames == FocalSpecies, 1, 0)
 
 # load rstan, set the parameters for the Finnish Horseshoe, and create a vector
 #       of all the data objects needed for the model
-library(rstan)
 options(mc.cores = parallel::detectCores())
 rstan_options(auto_write = TRUE)
 tau0 <- 2
@@ -54,14 +55,18 @@ slab_df <- 2*S - 1
 DataVec <- c("N", "S", "Fecundity", "reserve", "SpMatrix", "env", "Intra", "tau0", "slab_scale", "slab_df")
 
 # Now run a perliminary fit of the model to assess parameter shrinkage
-PrelimFit <- stan(file = "StanCode/BH_FH_Preliminary.stan", data = DataVec, iter = 3000, 
+PrelimFit <- stan(file = here("Empirical/StanCode/BH_FH_Preliminary.stan"), data = DataVec, iter = 3000, 
                   chains = 3)
 PrelimPosteriors <- extract(PrelimFit)
 
-# Diagnostic plots
+##### Diagnostic plots
+# First check the distribution of Rhats and effective sample sizes
 hist(summary(PrelimFit)$summary[,"Rhat"])
 hist(summary(PrelimFit)$summary[,"n_eff"])
+# Next check the correlation among key model parameters and identify any
+#       divergent transitions
 pairs(PrelimFit, pars = c("lambdas", "alpha_generic", "alpha_intra"))
+# Finally, check for autocorrelation in the posteriors of key model parameters
 acf(PrelimPosteriors$lambdas[,1,1])
 acf(PrelimPosteriors$lambdas[,1,2])
 acf(PrelimPosteriors$lambdas[,2,1])
@@ -71,8 +76,11 @@ acf(PrelimPosteriors$alpha_generic[,2])
 acf(PrelimPosteriors$alpha_intra[,1])
 acf(PrelimPosteriors$alpha_intra[,2])
 
-# Finally, determine which parameters warrant inclusion in the final model and create
-#    a visualization of those
+#### If the diagnostic plots don't reveal any problems wiht the model fit, now
+#       move on to determining which parameters warrant inclusion in the final
+#       model (i.e. the data pulled their posteriors away from 0). The final model
+#       will then be run with only these species-specific parameters, but without
+#       the regularized horseshoe priors.
 Inclusion_ij <- matrix(data = 0, nrow = 2, ncol = S)
 Inclusion_eij <- matrix(data = 0, nrow = 2, ncol = S)
 IntLevel <- 0.5 #0.5 usually, 0.75 for Waitzia, shade
@@ -90,7 +98,7 @@ sum(Inclusion_eij)
 
 DataVec <- c("N", "S", "Fecundity", "reserve", "SpMatrix", "env", "Intra",
                   "Inclusion_ij", "Inclusion_eij")
-FinalFit <- stan(file = "StanCode/BH_Final.stan", data = DataVec, iter = 3000, chains = 3)
+FinalFit <- stan(file = here("Empirical/StanCode/BH_Final.stan"), data = DataVec, iter = 3000, chains = 3)
 FinalPosteriors <- extract(FinalFit)
 
 # Diagnostic figures
@@ -106,7 +114,7 @@ acf(FinalPosteriors$alpha_generic[,2])
 acf(FinalPosteriors$alpha_intra[,1])
 acf(FinalPosteriors$alpha_intra[,2])
 
-FileName <- paste("StanFits/", FocalPrefix, "_", EnvCov, "_FinalFit.rdata", sep = "")
+FileName <- paste(here("Empirical/StanFits/"), FocalPrefix, "_", EnvCov, "_FinalFit.rdata", sep = "")
 save(FinalFit, SpNames, N, S, Fecundity, reserve, SpMatrix, env, Inclusion_ij,
      Inclusion_eij, tau0, slab_scale, slab_df, Intra, file = FileName)
 

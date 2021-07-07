@@ -2,13 +2,15 @@
 #    There will be two figures (1 per species), each with a plot of lambda and
 #    alphas across both environmental gradients
 
-setwd("~/Desktop/Wyoming/SparseInteractions/Empirical/")
+rm(list = ls())
+library(RColorBrewer)
+library(here)
 
 # Set the figure name
-FigName <- "Waitzia.pdf"
+FigName <- here("Empirical/Waitzia.pdf")
 
 # Load in the empirical data and make objects for graphing
-FullData <- read.csv("water_full_env.csv")
+FullData <- read.csv(here("Empirical/water_full_env.csv"))
 ObsPhos <- as.vector(scale(FullData$Colwell.P))
 ObsShade <- as.vector(scale(FullData$Canopy))
 EnvLength <- 1000
@@ -19,7 +21,7 @@ ReserveNames <- c("Bendering", "Perenjori")
 
 # Load in the model fits for the current species
 # Phosphorous
-load("StanFits/WAAC_Phos_FinalFit.rdata")
+load(here("Empirical/StanFits/WAAC_Phos_FinalFit.rdata"))
 Post <- rstan::extract(FinalFit)
 Phos <- list(Post = Post, SpNames = SpNames, N = N, S = S, Fecundity = Fecundity,
              reserve = reserve, SpMatrix = SpMatrix, env = env, Inclusion_ij = Inclusion_ij,
@@ -27,7 +29,7 @@ Phos <- list(Post = Post, SpNames = SpNames, N = N, S = S, Fecundity = Fecundity
 rm(FinalFit, SpNames, N, S, Fecundity, reserve, SpMatrix, env, Inclusion_ij,
    Inclusion_eij, tau0, slab_scale, slab_df, Intra, Post)
 # Canopy cover
-load("StanFits/WAAC_Shade_FinalFit.rdata")
+load(here("Empirical/StanFits/WAAC_Shade_FinalFit.rdata"))
 Post <- rstan::extract(FinalFit)
 Shade <- list(Post = Post, SpNames = SpNames, N = N, S = S, Fecundity = Fecundity,
              reserve = reserve, SpMatrix = SpMatrix, env = env, Inclusion_ij = Inclusion_ij,
@@ -96,7 +98,6 @@ AlphaRange <- c(0, 0.06)
 LambdaRange <- range(LambdaPlotVals)
 PhosRange <- range(ObsPhos, na.rm = TRUE)
 ShadeRange <- range(ObsShade, na.rm = TRUE)
-library(RColorBrewer)
 DarkCols <- brewer.pal(n = 8, name = "Dark2")
 LambdaCols <- DarkCols[3:4]
 IntraCol <- DarkCols[5]
