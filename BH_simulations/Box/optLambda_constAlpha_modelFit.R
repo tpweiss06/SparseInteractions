@@ -3,7 +3,14 @@
 #    of dataset sizes (10, 20, 50, 100, 200), and then examine the accuracy of
 #    parameter estimates and posterior predictive checks on 300 out of sample
 #    data points.
+
 rm(list = ls())
+library(rstan)
+library(here)
+library(HDInterval)
+library(RColorBrewer)
+options(mc.cores = parallel::detectCores())
+rstan_options(auto_write = TRUE)
 
 # Set the current sample size and associated prefix for all graph and result
 #    file names
@@ -13,24 +20,16 @@ FilePrefix <- paste("N", N, "_", sep = "")
 
 # Now assign the focal species and the file paths for the stan models
 Focal <- 8
-PrelimStanPath <- "StanCode/Prelim_optLambda_constAlpha.stan"
-FinalStanPath <- "StanCode/Final_optLambda_constAlpha.stan"
+PrelimStanPath <- here("BH_simulations/Box/StanCode/Prelim_optLambda_constAlpha.stan")
+FinalStanPath <- here("BH_simulations/Box/StanCode/Final_optLambda_constAlpha.stan")
 
 # Load in the appropriate data
-FullSim <- read.csv("SimulationsDataFiles/simulation_perturb_opt_const.csv")
-TrueVals <- read.csv("SimulationsDataFiles/parameters_perturb_opt_const.csv")
+FullSim <- read.csv(here("BH_simulations/Box/SimulationsDataFiles/simulation_perturb_opt_const.csv"))
+TrueVals <- read.csv(here("BH_simulations/Box/SimulationsDataFiles/parameters_perturb_opt_const.csv"))
 TrueAlphas <- exp(TrueVals$alpha.5)
 TrueLambdaOpt <- TrueVals$z.env[Focal]
 TrueLambdaMax <- TrueVals$lambda.max[Focal]
 TrueLambdaWidth <- TrueVals$sigma.env[Focal]
-
-
-# Load necessary libraries
-library(rstan)
-library(HDInterval)
-library(RColorBrewer)
-options(mc.cores = parallel::detectCores())
-rstan_options(auto_write = TRUE)
 
 # assign some universal values to be used across model fits and graphs
 S <- 15
@@ -88,7 +87,7 @@ N <- length(Nt)
 PrelimFit <- stan(file = PrelimStanPath, data = PrelimDataVec, iter = 3000,
                   chains = 3, init = InitVals, control = list(max_treedepth = 15, adapt_delta = 0.99))
 PrelimPosteriors <- extract(PrelimFit)
-FitFileName <- paste("StanFits/optLambda_constAlpha/", FilePrefix, "PrelimFit.rdata", sep = "")
+FitFileName <- paste(here("BH_simulations/Box/StanFits/optLambda_constAlpha/"), FilePrefix, "PrelimFit.rdata", sep = "")
 save(PrelimFit, PrelimPosteriors, file = FitFileName)
 
 # Examine diagnostics and determine if parameters of model run should be updated
@@ -193,7 +192,7 @@ InitVals <- list(ChainInitials, ChainInitials, ChainInitials)
 FinalFit <- stan(file = FinalStanPath, data = FinalDataVec, iter = 3000,
                  chains = 3, init = InitVals)
 FinalPosteriors <- extract(FinalFit)
-FitFileName <- paste("StanFits/optLambda_constAlpha/", FilePrefix, "FinalFit.rdata", sep = "")
+FitFileName <- paste(here("BH_simulations/Box/StanFits/optLambda_constAlpha/"), FilePrefix, "FinalFit.rdata", sep = "")
 save(FinalFit, FinalPosteriors, Inclusion_ij, file = FitFileName)
 
 # Examine diagnostics and determine if parameters of model run should be updated

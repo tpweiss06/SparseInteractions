@@ -5,6 +5,12 @@
 #    data points.
 
 rm(list = ls())
+library(here)
+library(rstan)
+library(HDInterval)
+library(RColorBrewer)
+options(mc.cores = parallel::detectCores())
+rstan_options(auto_write = TRUE)
 
 # Set the current sample size and associated prefix for all graph and result
 #    file names
@@ -16,20 +22,13 @@ FilePrefix <- paste("N", N, "_", sep = "")
 # These paths are within the "Box" folder (this file's location), and may need to be updated
 # to the user's file structure
 Focal <- 1
-PrelimStanPath <- "StanCode/Prelim_monoLambda_constAlpha.stan"
-FinalStanPath <- "StanCode/Final_monoLambda_constAlpha.stan"
+PrelimStanPath <- here("BH_simulations/Box/StanCode/Prelim_monoLambda_constAlpha.stan")
+FinalStanPath <- here("BH_simulations/Box/StanCode/Final_monoLambda_constAlpha.stan")
 
 # Load in the appropriate data
-FullSim <- read.csv("SimulationsDataFiles/simulation_perturb2_const.csv")
-TrueVals <- read.csv("SimulationsDataFiles/parameters_perturb2_const.csv")
+FullSim <- read.csv(here("BH_simulations/Box/SimulationsDataFiles/simulation_perturb2_const.csv"))
+TrueVals <- read.csv(here("BH_simulations/Box/SimulationsDataFiles/parameters_perturb2_const.csv"))
 TrueAlphas <- TrueVals$alpha.1
-
-# Load necessary libraries
-library(rstan)
-library(HDInterval)
-library(RColorBrewer)
-options(mc.cores = parallel::detectCores())
-rstan_options(auto_write = TRUE)
 
 # assign some universal values to be used across model fits and graphs
 S <- 15
@@ -84,7 +83,7 @@ N <- length(Nt)
 PrelimFit <- stan(file = PrelimStanPath, data = PrelimDataVec, iter = 3000,
                   chains = 3, init = InitVals, control = list(max_treedepth = 15, adapt_delta = 0.995))
 PrelimPosteriors <- extract(PrelimFit)
-FitFileName <- paste("StanFits/monoLambda_constAlpha/", FilePrefix, "PrelimFit.rdata", sep = "")
+FitFileName <- paste(here("BH_simulations/Box/StanFits/monoLambda_constAlpha/"), FilePrefix, "PrelimFit.rdata", sep = "")
 save(PrelimFit, PrelimPosteriors, file = FitFileName)
 
 # Examine diagnostics and determine if parameters of model run should be updated
@@ -132,7 +131,7 @@ InitVals <- list(ChainInitials, ChainInitials, ChainInitials)
 FinalFit <- stan(file = FinalStanPath, data = FinalDataVec, iter = 3000,
                  chains = 3, init = InitVals, control = list(max_treedepth = 15))
 FinalPosteriors <- rstan::extract(FinalFit)
-FitFileName <- paste("StanFits/monoLambda_constAlpha/", FilePrefix, "FinalFit.rdata", sep = "")
+FitFileName <- paste(here("BH_simulations/Box/StanFits/monoLambda_constAlpha/"), FilePrefix, "FinalFit.rdata", sep = "")
 save(FinalFit, FinalPosteriors, Inclusion_ij, file = FitFileName)
 
 # Examine diagnostics and determine if parameters of model run should be updated
@@ -223,7 +222,7 @@ GenericIntercepts[Focal] <- 0
 TrueGenericIntercept <- log(sum(colSums(SpMatrix) * GenericIntercepts * exp(TrueAlphas)) / sum(colSums(SpMatrix) * GenericIntercepts))
 
 # Finally, save all the necessary results for the figures
-FileName <- paste("StanFits/monoLambda_constAlpha/", FilePrefix, "GraphStuff.rdata", sep = "")
+FileName <- paste(here("BH_simulations/Box/StanFits/monoLambda_constAlpha/"), FilePrefix, "GraphStuff.rdata", sep = "")
 save(PredVals, Growth_ppc, LambdaEsts, AlphaEsts, Inclusion_ij,
      TrueGenericIntercept, 
      file = FileName)

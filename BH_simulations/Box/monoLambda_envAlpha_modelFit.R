@@ -5,6 +5,12 @@
 #    estimates from the true values, and save it all for later plotting.
 
 rm(list = ls())
+library(here)
+library(rstan)
+library(HDInterval)
+library(RColorBrewer)
+options(mc.cores = parallel::detectCores())
+rstan_options(auto_write = TRUE)
 
 # Set the current sample size and associated prefix for all graph and result
 #    file names
@@ -17,23 +23,16 @@ FilePrefix <- paste("N", N, "_", sep = "")
 # These paths are within the "Box" folder (this file's location), and may need to be updated
 # to the user's file structure
 Focal <- 1
-PrelimStanPath <- "StanCode/Prelim_monoLambda_envAlpha.stan"
-FinalStanPath <- "StanCode/Final_monoLambda_envAlpha.stan"
+PrelimStanPath <- here("BH_simulations/Box/StanCode/Prelim_monoLambda_envAlpha.stan")
+FinalStanPath <- here("BH_simulations/Box/StanCode/Final_monoLambda_envAlpha.stan")
 
 # Load in the appropriate data
 # These paths are within the "Box" folder (this file's location), and may need to be updated
 # to the user's file structure
-FullSim <- read.csv("SimulationsDataFiles/simulation_perturb2.csv")
-TrueVals <- read.csv("SimulationsDataFiles/parameters_perturb2.csv")
+FullSim <- read.csv(here("BH_simulations/Box/SimulationsDataFiles/simulation_perturb2.csv"))
+TrueVals <- read.csv(here("BH_simulations/Box/SimulationsDataFiles/parameters_perturb2.csv"))
 TrueAlphaMeans <- TrueVals$alpha.1
 TrueAlphaSlopes <- TrueVals$alpha.env.gen + TrueVals$alpha.env.spec
-
-# Load necessary libraries
-library(rstan)
-library(HDInterval)
-library(RColorBrewer)
-options(mc.cores = parallel::detectCores())
-rstan_options(auto_write = TRUE)
 
 # assign some universal values to be used across model fits and graphs
 S <- 15
@@ -92,7 +91,7 @@ PrelimPosteriors <- extract(PrelimFit)
 # since each model fit can take some time to run)
 # These paths are within the "Box" folder (this file's location), and may need to be updated
 # to the user's file structure
-FitFileName <- paste("StanFits/monoLambda_envAlpha/", FilePrefix, "PrelimFit.rdata", sep = "")
+FitFileName <- paste(here("BH_simulations/Box/StanFits/monoLambda_envAlpha/"), FilePrefix, "PrelimFit.rdata", sep = "")
 save(PrelimFit, PrelimPosteriors, file = FitFileName)
 
 # Examine diagnostics and determine if parameters of model run should be updated
@@ -161,7 +160,7 @@ Posteriors <- extract(FinalFit)
 # since each model fit can take some time to run)
 # These paths are within the "Box" folder (this file's location), and may need to be updated
 # to the user's file structure
-FitFileName <- paste("StanFits/monoLambda_envAlpha/", FilePrefix, "FinalFit.rdata", sep = "")
+FitFileName <- paste(here("BH_simulations/Box/StanFits/monoLambda_envAlpha/"), FilePrefix, "FinalFit.rdata", sep = "")
 save(FinalFit, Posteriors, Inclusion_ij, Inclusion_eij, file = FitFileName)
 
 # Examine diagnostics and determine if parameters of model run should be updated
@@ -271,7 +270,7 @@ TrueGenericSlope <- mean(TrueAlphaSlopes*GenericSlopes*(Totals/max(Totals)))
 # since each model fit can take some time to run)
 # These paths are within the "Box" folder (this file's location), and may need to be updated
 # to the user's file structure
-FileName <- paste("StanFits/monoLambda_envAlpha/", FilePrefix, "GraphStuff.rdata", sep = "")
+FileName <- paste(here("BH_simulations/Box/StanFits/monoLambda_envAlpha/"), FilePrefix, "GraphStuff.rdata", sep = "")
 save(PredVals, Growth_ppc, LambdaEsts, AlphaEsts, Inclusion_eij, Inclusion_ij,
      TrueGenericIntercept, TrueGenericSlope,
      file = FileName)
