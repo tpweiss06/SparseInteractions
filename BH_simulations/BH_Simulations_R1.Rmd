@@ -1,0 +1,387 @@
+---
+title: 'Sparse interactions: Simulations'
+output:
+  pdf_document: 
+      highlight: haddock
+      toc: true
+      toc_depth: 3
+  html_document: default
+---
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(here)
+```
+
+Code used to generate simulated communities for the manuscript "Disentangling key species interactions in diverse and heterogeneous communities: A Bayesian sparse modeling approach"
+
+## Functions
+
+### Single Beverton-Holt run
+Function for a single Beverton-Holt time step within a single plot. 
+Inputs:  
+- number of species in the plot  
+- vector of the species' starting populations  
+- vector of the species' $\lambda_i$ values ($\lambda_{e,i}$ in the given plot)  
+- matrix of the $\alpha_{i,j}$ interactions between each species pair ($\alpha_{e,i,j}$ in the given plot)  
+Calculates new populations with a for loop over i species.  
+```{r function-BH, eval=FALSE}
+BH.run <- function(num.species, N.0, lambda, alpha){
+  N.1 <- numeric(length = num.species) # blank vector to be filled in with the for loop
+  for(i in 1:num.species){
+    comp.sum <- sum(alpha[,i]*N.0)
+    N.1[i] <- N.0[i]*lambda[i] / (1 + comp.sum)
+  }
+  
+  return(N.1)
+}
+```
+
+
+### Multiple simulations through time
+Function for the Beverton-Holt simulations on a given set of species parameters. Conducts multiple runs from a single set of input species' $\lambda_{e,i}$ intrinsic growth rates and species-pair $\alpha_{e,i,j}$ competition coefficients. Each run represents a unique plot with a given environmental condition $X_e$, and is run for an input number of time steps.
+
+Inputs:  
+- Data frame with a row for each species. Columns are species ID number, $\lambda$ parameters (either ```lambda.mean``` and ```lambda.env``` or ```lambda.max```, ```z.env```, and ```sigma.env```; see below for details), and $\alpha$ parameters (for example, a 4-species simulation would have columns labeled ```alpha.1```, ```alpha.2```, ```alpha.3```, ```alpha.4```, and ```alpha.env.gen``` and ```alpha.env.spec``` coefficient-environment interaction terms)  
+- Number of runs  
+- Number of time steps  
+- Environmental condition for each run  
+- Demographic heterogeneity binary: whether noise should be added to the end population values  
+- Binary ```lambda.opt``` term: If ```lambda.opt``` is false, $\lambda_{e,i}$ has a monotonic relationship with the environment and ```df.in``` should have two parameters, ```lambda.mean``` and ```lambda.env```. If ```lambda.opt``` is true, $\lambda_{e,i}$ has an optimum environmental value and ```df.in``` should have three parameters: ```lambda.max```, ```z.env```, and ```sigma.env```  
+- Data frame of starting population values for each species in each run. One column ```run.count``` for run ID and one for the population values ```pop.size```  
+
+Dependencies:  
+- Calls the single BH run function above.   
+
+Outputs: 
+- Data frame in a long tidy format with columns for species, run IDs, environmental conditions in the runs, time step, and population.  
+
+Steps:  
+- For each run, calculates the $\lambda_{e,i}$ values for each species in that given environment $X_e$ and the $\alpha_{e,i,j}$ values for each species pair in the given environment.  
+- If using a monotonic lambda-environment relationship (```lambda.opt == FALSE```), the lambda value for each species $\lambda_{e,i}$ is calculated as $e^{\lambda_{i \ (mean)} \ + \ \lambda_{e,i}*env}$. If using an optimum lambda-environment relationship (```lambda.opt == TRUE```), $\lambda_{e,i}$  is calculated as $\lambda_{i \ max}e^{-\left(\frac{z_i-env}{2\sigma_i} \right)^2}$.    
+- $\alpha_{e,i,j}$ is calculated as $e^{\alpha_{i,j}} + \alpha_{e,i,j}X_e}$.  
+- Within each run, simulates the community through time with those $\lambda$ and $\alpha$ parameters.  
+- If ```dem.het == TRUE```, adds poisson noise at each time step by making each species population size a single poisson draw from a distribution with a rate equal to its deterministically-calculated population size.  
+
+```{r function-BH-env, eval=FALSE}
+BH.env <- function(df.in, n.runs, t.steps, p.start, env, dem.het = FALSE, lambda.opt = FALSE)
+{
+  # setting up empty data frame to store the output
+  n.species <- length(df.in$species)
+  species <- rep(factor(1:n.species), times = n.runs*(t.steps+1))
+  run <- rep(1:n.runs, each = n.species*(t.steps+1))
+  time <- rep(rep(0:t.steps, each = n.species), times = n.runs)
+  pop <- rep(-100, times = n.species*(t.steps+1)*n.runs) 
+  run.env <- rep(env, each = n.species*(t.steps+1)) # env conditions in each run
+  
+  df.out <- data.frame(species, run, run.env, time, pop)
+  
+  
+  # running across each run (environmental condition varies across runs)
+  for(r in 1:n.runs){
+    # initial populations
+    start.rows <- df.out %>% 
+      with(run == r & time == 0) %>%
+      which()
+    start.pop <- with(p.start, pop.size[run.count == r])
+    df.out$pop[start.rows] <- start.pop
+    
+    # calculating lambda for each species in the given environment
+    if(lambda.opt == TRUE){ 
+      # lambda with environmental optimum
+      env.diff <- df.in$z.env - env[r] # diff bw species opt env and current env
+      env.width <- 2*df.in$sigma.env # denom for below
+      lambda <- df.in$lambda.max * exp(-(env.diff/env.width)^2) 
+    }
+    else {
+      # monotonic lambda-environment interaction
+      lambda <- exp(df.in$lambda.mean + df.in$lambda.env*env[r])
+    }
+    
+    # calculating alpha for each species pair in the given environment
+    alpha.means <- df.in %>% 
+      select(starts_with('alpha') & !starts_with('alpha.env')) # mean alphas
+    alpha.env.int <- df.in$alpha.env * env[r] # alpha x env interaction
+    alpha <- alpha.means # make a same-sized df
+    
+    for(i in 1:n.species){
+      alpha[i,] <- exp(alpha.means[i,] + alpha.env.int[i])
+    }
+    
+    # simulating the community through time
+    for(t in 0:t.steps){
+      # where to store the data for the runs
+      end.rows <- df.out %>% 
+        with(run == r & time == t+1) %>%
+        which()
+      
+      end.pop <- BH.run(n.species, start.pop, lambda, alpha)
+      end.pop[end.pop < 0] <- 0 # set negative numbers to zero
+      
+      # option to add in demographic stochasticity
+      if(dem.het == TRUE) {
+        end.pop <- rpois(length(end.pop), end.pop)
+      }
+      
+      df.out$pop[end.rows] <- end.pop
+      
+      start.pop <- end.pop # updating populations for the next time step
+    }
+  }
+  return(df.out)
+}
+```
+
+## Running simulations
+Uses the functions above to simulate plot communities deterministically to near-equilibrium values, perturb species populations, and then look at stochastic population change from that perturbed state to the following time step. 
+
+### Set up input parameters
+Setting number of species in the simulation, number of runs with different environments, number of steps for the warm-up simulation in each run (20 recommended), strength of environmental variation among plots (0 = no variation, 1 = variation), and parameters for initial population distributions (these are pretty flexible). Defaults for methods paper: 15 species, 500 runs, 20 steps for warm up runs, mean population size 80, sd population size 50.
+
+The simulations can either include a thinned treatment or not. If thinned is false, only the main simulations are run. If thinned is true, num.runs.thinned simulations starting with one individual of the focal species and zeros for everything else are run. The focal species is specified in the code section that runs the thinned treatment, and can be any or all of the species. These thinned simulation runs are included in the final output simulation data. 
+
+```{r env-input-0, eval=FALSE}
+num.species <- 15 # number of species
+num.runs <- 500 # number of separate runs
+pre.time.steps <- 20 # steps for the warm-up run
+env.variation <- 1 # environmental variation
+pop.start.mean <- 80 # mean initial population size
+pop.start.sd <- 50 # standard deviation in initial population size
+thinned <- TRUE
+num.runs.thinned <- 200 # number of runs per focal species in the thinned treatment
+```
+
+Determining type of relationship between $\lambda$ and the environment. If ```lambda.optimum == FALSE```, simulation uses the monotonic lambda-environment relationship. If ```lambda.optimum == TRUE```, simulation uses an optimum environment for $\lambda$. ```env.response``` parameter sets the strength of the variation in species' environmental responses in $\lambda$ as the standard deviation for the Gaussian distribution of slopes (monotonic) or location of optima (optimum). Use 0.5 for a decently strong variation.
+
+```{r env-input-lambda, eval=FALSE}
+lambda.optimum <- FALSE
+env.response <- 0.5
+```
+
+Parameters for $\alpha_{e,i,j}$ values:  
+- Intraspecific competition $\alpha_{intra}$ -3.5
+- Interspecific competition terms $\alpha_{i,j}$ are selected from a uniform distribution set by $a.mean$ and $a.range$ values that give the mean and width of the distribution respectively. For simplicity, each competitor $j$ affects all interacting species $i$ equally.
+- Standard deviation for $\alpha_{e,i}$ environmental interactions (default sd of 1, mean is 0)  
+
+```{r env-input-alpha, eval=FALSE}
+
+a.intra <- -3.5 # intraspecific competition
+
+a.mean <- -7 # competition mean 
+a.range <- 3 # width for uniform distribution
+
+a.env.sd <- 1 # range for alpha-env interaction (sd for normal dist with mean of 0)
+
+```
+
+
+
+### Setting coefficients for the simulation
+
+Setting the environmental condition in each plot $X_e$
+```{r env-running-plots, eval=FALSE}
+env.condition <- rnorm(n = num.runs, mean = 0, sd = env.variation)
+```
+
+Setting lambda values for each species ($\lambda_{i \ (max)}$, $z_i$ and $\sigma_i$ for optimum; $\lambda_{i \ (mean)}$ and $\lambda_{e,i}$ for monotonic). Note that because of the different functional forms, $\lambda_{i \ (max)}$ is drawn from a range of 1 to 5, while $\lambda_{i \ (mean)}$ is drawn from a range of 0 to 1.5 (which after exponentiating corresponds to a similar range of 1 to 4.5)
+
+```{r env-running-lambda, eval=FALSE}
+if(lambda.optimum == TRUE){
+  # optimum environmental condition for species
+  # max intrinsic growth
+  lambda.max <- runif(n = num.species, min = 1, max = 5) 
+  # environmental response
+  z.env <- rnorm(n = num.species, mean = 0, sd = env.variation)
+  sigma.env <- rexp(n = num.species, rate = 0.5)
+} else { 
+  # montonic environmental relationships for species
+  lambda.mean <- runif(n = num.species, min = 0, max = 1.5) 
+  # environmental response
+  lambda.env <- rnorm(n = num.species, mean = 0, sd = env.response)
+}
+```
+
+
+Setting up $\alpha$ values for each species pair based on the distributions for $\alpha_{i,j}$ and $\alpha_{e,i,j}$ set above.
+```{r env-running-alpha, eval=FALSE}
+# setting up competition matrix
+alphas <- runif(num.species, min = a.mean - a.range/2, 
+                max = a.mean + a.range/2)
+alpha <- matrix(rep(alphas, times = num.species), nrow = num.species, ncol = num.species) 
+
+# filling in alphas for intraspecific variaiton
+diag(alpha) <- a.intra
+
+# environmentally-variable alpha terms
+alpha.env <- rnorm(num.species, mean = 0, sd = a.env.sd)
+
+```
+
+Creating a coefficient dataframe with one row per species and columns for species ID, $\lambda$ parameters, and $\alpha$ parameters filled in from the above. 
+```{r env-running-df, eval=FALSE}
+# input dataframe of coefficients
+if(lambda.optimum == TRUE){
+  df.coef <- data.frame(species = factor(1:num.species), 
+                        lambda.max, z.env, sigma.env, 
+                        alpha, alpha.env) %>%
+    rename_with(.,~gsub("X","alpha.", .x, fixed = TRUE))
+} else { 
+  df.coef <- data.frame(species = factor(1:num.species), 
+                        lambda.mean, lambda.env, 
+                        alpha, alpha.env) %>%
+    rename_with(.,~gsub("X","alpha.", .x, fixed = TRUE))
+}
+```
+
+Alternative to the above three sections: Reading in a coefficient dataframe with lambdas and alphas (would still need to run first section to set environmental conditions in the plots)
+```{r df-read, eval=FALSE}
+# df.coef <- read.csv(here("BH_simulations/Box/SimulationsDataFiles/parameters_test_5.csv"))
+
+# for constant alpha-environment
+#df.coef$alpha.env.gen <- 0
+# df.coef$alpha.env.spec <- 0
+```
+
+### Running the functions
+
+Setting up the initial populations
+```{r env-running-pop, eval=FALSE}
+pop.size <- as.integer(rnorm(num.species*num.runs, 
+                             mean = pop.start.mean, 
+                             sd = pop.start.sd))
+pop.size[pop.size < 0] <- 0 # set negative numbers to zero
+run.count <- rep(1:num.runs, each = num.species)
+pop.start <- data.frame(run.count, pop.size)
+```
+
+Warm-up steps: deterministic simulations to near-equilibrium
+```{r env-running-warmup, eval=FALSE}
+df.eq <- BH.env(df.in = df.coef, 
+                n.runs = num.runs, t.steps = pre.time.steps, 
+                p.start = pop.start, 
+                env = env.condition,
+                dem.het = FALSE,
+                lambda.opt = lambda.optimum)
+```
+
+Visualizing the warm-up run
+```{r env-warmup-plotting, eval=FALSE}
+
+ggplot(filter(df.eq, run < 21), aes(x = time, y = pop, color = species)) +
+  facet_wrap(vars(run), scales = 'free_y') +
+  geom_line() +
+  theme_classic() +
+  xlab('Timestep') + 
+  ylab('Population')
+
+# ggsave(here('BH_simulations/Box/warmup_x.pdf', width = 6, height = 4, units = 'in')
+
+```
+
+Perturbing equilibrium populations with noise.
+```{r env-running-perturb, eval=FALSE}
+pop.eq <- filter(df.eq, time == max(time)) # final time step
+
+pop.eq.dist <- rnorm(length(pop.eq$pop), 
+                     mean = pop.eq$pop + 1, 
+                     sd = pop.eq$pop + 1) %>% round() # perturbation
+
+pop.eq.dist[pop.eq.dist < 0] <- 0 # no negative population sizes
+pop.eq.dist.df <- data.frame(run.count, pop.size = pop.eq.dist)
+```
+
+Running the simulation stochastically for one time step from those perturbed population values. This is the final data used for the sparse model.
+```{r env-running-final, eval=FALSE}
+df.result <- BH.env(df.in = df.coef, 
+                    n.runs = num.runs, t.steps = 1, 
+                    p.start = pop.eq.dist.df, 
+                    env = env.condition,
+                    dem.het = TRUE,
+                    lambda.opt = lambda.optimum)
+```
+
+If using a thinned treatment with focal individuals, running those simulations and adding them to the data frame. The focal species are selected automatically by sampling at random from the set of species are are present (population > 1) in at least 2/3 of the pre-perturbation plots. Alternatively, focal species could be set manually as a single species,  ```1:num.species``` for all of them, or a specific set of species of interest. Note that this is currently only set up to deal with two time steps, and would need to be expanded to have more.  
+
+```{r env-running-focal, eval=FALSE}
+
+if(thinned == TRUE){
+     # choose the focal species from the species that are present in at least 2/3 of the plots
+     pop.present <- pop.eq %>% 
+          group_by(species) %>%
+          dplyr::summarise(
+               n.present = length(which(pop > 1)))
+     focal.species.options <- which(pop.present$n.present > (num.runs*.67))
+     focal.species <- sample(focal.species.options, size = 1)
+     
+     num.focal <- length(focal.species)
+     total.runs <- num.runs.thinned*num.focal
+     
+     species.id <- rep(1:num.species, time = total.runs)
+     pop.size <- numeric(num.species*total.runs)
+     run.count <- rep(1:(total.runs), each = num.species)
+     pop.start.thinned <- data.frame(run.count, pop.size, species.id)
+     
+     for(i in 1:num.focal){
+          runs.start <- (i-1)*num.runs.thinned + 1
+          runs.end <- i*num.runs.thinned
+          pop.start.thinned$pop.size[run.count %in% runs.start:runs.end & 
+                                          species.id == focal.species[i]] <- 1
+     }
+     
+     env.condition.thinned <- rnorm(n = total.runs, 
+                                    mean = 0, sd = env.variation)
+     
+     df.result.thinned <- BH.env(df.in = df.coef, 
+                                 n.runs = total.runs, 
+                                 t.steps = 1, 
+                                 p.start = pop.start.thinned, 
+                                 env = env.condition.thinned,
+                                 dem.het = TRUE,
+                                 lambda.opt = lambda.optimum)
+     
+     df.result$thinned <- 0
+     df.result.thinned$thinned <- 1
+     df.result <- df.result %>% rbind(df.result.thinned)
+}
+
+```
+
+## Visualizing and saving output
+
+### Storing the output
+```{r env-storing, eval=FALSE}
+# write.csv(df.coef, file = here("BH_simulations/Main/SimulationsDataFiles/parameters_new.csv"))
+# write.csv(df.result, file = here("BH_simulations/Main/SimulationsDataFiles/simulation_new.csv"))
+# write.csv(df.eq, file = here('BH_simulations/Main/SimulationsDataFiles/warmup_x.csv')
+
+```
+
+
+### Environmental interactions
+Rough visualization of output of final two time steps and the input coefficients
+```{r env-plotting-output, eval=FALSE}
+df.coef$species <- factor(df.coef$species)
+
+df.coef
+
+df.result.wide <- df.result %>%
+  pivot_wider(names_from = time, names_prefix = "time.", values_from = pop) %>%
+  left_join(df.coef, by = 'species')
+
+df.result.wide$Fec <- (df.result.wide$time.1 - df.result.wide$time.0)/(df.result.wide$time.0 + 1)
+df.result.wide$growth.ratio <- df.result.wide$time.1 / (df.result.wide$time.0 + 1)
+
+ggplot(filter(df.result.wide, thinned == 0),
+       aes(x = run.env, y = Fec, color = species)) + 
+  geom_point() + 
+  geom_smooth(se = FALSE) +
+  theme_classic()
+
+ggplot(filter(df.result.wide, thinned == 0),
+       aes(x = run.env, y = log(growth.ratio), color = species)) + 
+  geom_point() + 
+  theme_classic() + 
+  ylab('Ln of growth ratio')
+
+
+```
