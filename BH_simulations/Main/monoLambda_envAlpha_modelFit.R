@@ -12,22 +12,22 @@ library(rstan)
 options(mc.cores = parallel::detectCores())
 rstan_options(auto_write = TRUE)
 
-# Set the current sample size and associated prefix for all graph and result
+# Set the current sample size (10, 50, or 200) and associated prefix for all graph and result
 #    file names
-N <- 100
+N <- 200
 max_N <- 200
 FilePrefix <- paste("N", N, "_", sep = "")
 
 # Now assign the focal species and the file paths for the stan models
-Focal <- 1
+Focal <- 6
 PrelimStanPath <- here("BH_simulations/Main/StanCode/Prelim_monoLambda_envAlpha.stan")
 FinalStanPath <- here("BH_simulations/Main/StanCode/Final_monoLambda_envAlpha.stan")
 
 # Load in the appropriate data
-FullSim <- read.csv(here("BH_simulations/Main/SimulationsDataFiles/simulation_perturb.csv"))
-TrueVals <- read.csv(here("BH_simulations/Main/SimulationsDataFiles/parameters_perturb.csv"))
+FullSim <- read.csv(here("BH_simulations/Main/SimulationsDataFiles/simulation_new.csv"))
+TrueVals <- read.csv(here("BH_simulations/Main/SimulationsDataFiles/parameters_new.csv"))
 TrueAlphaMeans <- TrueVals$alpha.1
-TrueAlphaSlopes <- TrueVals$alpha.env.gen + TrueVals$alpha.env.spec
+TrueAlphaSlopes <- TrueVals$alpha.env #+ TrueVals$alpha.env.spec
 
 # assign some universal values to be used across model fits and graphs
 S <- 15
@@ -79,7 +79,7 @@ Ntp1 <- c(subset(FullSim, (species == Focal) & (run <= N) & (time == 1) & (thinn
 # Now run the preliminary fit of the model to assess parameter shrinkage
 N <- 2*N
 PrelimFit <- stan(file = PrelimStanPath, data = PrelimDataVec, iter = 3000,
-                  chains = 3, init = InitVals, control = list(adapt_delta = 0.99, max_treedepth = 15))
+                  chains = 3, init = InitVals, control = list(adapt_delta = 0.9, max_treedepth = 15))
 PrelimPosteriors <- extract(PrelimFit)
 
 # Examine diagnostic plots and determine if the model fit is adequate to move
@@ -183,7 +183,7 @@ for(s in 1:S){
 }
 
 # If the fit looks good, safe the final output here
-FitFileName <- paste(here("BH_simulations/Main/StanFits/"), FilePrefix, "FinalFit.rdata", sep = "")
+FitFileName <- paste(here("BH_simulations/Main/StanFits/"), FilePrefix, "FinalFit_R1.rdata", sep = "")
 save(FinalFit, Posteriors, Inclusion_ij, Inclusion_eij, file = FitFileName)
 
 
@@ -263,7 +263,7 @@ Totals <- colSums(SpMatrix) * GenericSlopes
 TrueGenericSlope <- mean(TrueAlphaSlopes*GenericSlopes*(Totals/max(Totals)))
 
 # Finally, save all the necessary results for the figures
-FileName <- paste(here("BH_simulations/Main/StanFits/"), FilePrefix, "GraphStuff.rdata", sep = "")
+FileName <- paste(here("BH_simulations/Main/StanFits/"), FilePrefix, "GraphStuff_R1.rdata", sep = "")
 save(PredVals, Growth_ppc, LambdaEsts, AlphaEsts, Inclusion_eij, Inclusion_ij,
      TrueGenericIntercept, TrueGenericSlope,
      file = FileName)

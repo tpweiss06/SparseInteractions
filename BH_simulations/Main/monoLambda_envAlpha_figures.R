@@ -17,7 +17,7 @@ GenericDeviations <- vector(mode = "list", length = 3)
 FilePrefixes <- c("N10_", "N50_", "N200_")
 for(i in 1:3){
         FileName <- paste(here("BH_simulations/Main/StanFits/"),
-                FilePrefixes[i], "GraphStuff.rdata", sep = "")
+                FilePrefixes[i], "GraphStuff_R1.rdata", sep = "")
         load(FileName)
         ppcPreds[[i]] <- PredVals
         Alphas[[i]] <- AlphaEsts
@@ -25,7 +25,7 @@ for(i in 1:3){
         InterceptInclusion[[i]] <- Inclusion_ij
         SlopeInclusion[[i]] <- Inclusion_eij
         FileName <- paste(here("BH_simulations/Main/StanFits/"),
-                FilePrefixes[i], "FinalFit.rdata", sep = "")
+                FilePrefixes[i], "FinalFit_R1.rdata", sep = "")
         load(FileName)
         # Calculate the mean and hdi for the posterior of the deviations in the
         #      generic alpha terms
@@ -47,7 +47,7 @@ for(i in 1:3){
 #       filled squares. Intraspecific alpha points will be filled triangles. Species specific
 #       interspecific alpha terms estimated by the model will be filled circles. The generic
 #       interspecific alpha terms estimated by the model will be open circles.
-Focal <- 10
+Focal <- 6
 S <- 15
 ppc_Range <- c(-1.75, 3)
 param_xRange <- c(-5, 5)
@@ -70,8 +70,8 @@ InterceptOffset <- 0.55
 SlopeOffset <- 0.45
 Generic_y <- c(InterceptOffset, SlopeOffset)
 NonGeneric_y <- matrix(data = NA, nrow = NumNonGeneric, ncol = 2)
-NonGeneric_y[,1] <- c(1.35, 1.95, 2.55, 3.15, 3.75)
-NonGeneric_y[,2] <- c(1.25, 1.85, 2.45, 3.05, 3.65)
+NonGeneric_y[,1] <- 1.35 #c(1.35, 1.95, 2.55, 3.15, 3.75)
+NonGeneric_y[,2] <- 1.25 #c(1.25, 1.85, 2.45, 3.05, 3.65)
 Intra_y <- c(4 + InterceptOffset, 4 + SlopeOffset)
 Lambda_y <- c(5 + InterceptOffset, 5 + SlopeOffset)
 
@@ -94,7 +94,7 @@ Letters <- matrix(c(expression(bold("a")), expression(bold("b")), expression(bol
                     expression(bold("d")), expression(bold("e")), expression(bold("f"))),
                     nrow = 3, ncol = 2, byrow = TRUE)
 
-FigName <- here("BH_simulations/Main/SimResults.pdf")
+FigName <- here("BH_simulations/Main/SimResults_R1.pdf")
 pdf(file = FigName, width = 7, height = 8, onefile = FALSE, paper = "special")
      par(mfrow = c(3,2), mar = c(2, 2.5, 2, 2.5), oma = c(2, 0, 2, 0))
      for(i in 1:3){
