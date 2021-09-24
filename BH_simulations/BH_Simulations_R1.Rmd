@@ -13,7 +13,7 @@ library(tidyverse)
 library(here)
 ```
 
-Code used to generate simulated communities for the manuscript "Disentangling key species interactions in diverse and heterogeneous communities: A Bayesian sparse modeling approach"
+Code used to generate simulated communities for the manuscript "Disentangling key species interactions in diverse and heterogeneous communities: A Bayesian sparse modeling approach". This code generates a single simulation run, and is used in figures 1 and 3 and supplemental figure s2.
 
 ## Functions
 
@@ -312,6 +312,9 @@ if(thinned == TRUE){
                n.present = length(which(pop > 1)))
      focal.species.options <- which(pop.present$n.present > (num.runs*.67))
      focal.species <- sample(focal.species.options, size = 1)
+     
+     df.coef$focal <- 0
+     df.coef$focal[focal.species] <- 1
      
      num.focal <- length(focal.species)
      total.runs <- num.runs.thinned*num.focal
