@@ -8,24 +8,24 @@
 #    both or only one term), the RMSE to the out-of-sample data, and key model
 #    diagnostics for both the preliminary and final model fits.
 
-# Set the number of nodes and the number of tasks per node
-# NOTE: this should match the .sh file
-nodes <- 1
-ntasks_per_node <- 32
-TotalTasks <- nodes*ntasks_per_node
-
 rm(list = ls())
-setwd("/project/commbayes/SparseInteractions")
-library(parallel)
-library(Rmpi)
+setwd("/project/commbayes/SparseInteractions/BH_sims")
+library("rstan")
+options(mc.cores = parallel::detectCores())
+rstan_options(auto_write = TRUE)
+library(HDInterval)
+
+# Set the current number of simulations to run through
+SimIDs <- 501:600
+OutputFile <- "MainSimResults06.csv"
 
 # Load in the simulation data
-load("test_multiple_simulations.RData")
+load("BH_simulations_1200.RData")
 
 # Create a data frame with columns for each of the values specified in the file
 #    header
-Nsims <- length(simulations)
-SimID <- rep(1:Nsims, each = 3)
+Nsims <- length(SimIDs)
+SimID <- rep(SimIDs, each = 3)
 Size <- rep(c(10, 50, 200), Nsims)
 LambdaIntDev <- rep(NA, Nsims*3)
 LambdaSlopeDev <- rep(NA, Nsims*3)
@@ -54,15 +54,16 @@ MainSimResults <- data.frame(SimID, Size, LambdaIntDev, LambdaSlopeDev, IntraInt
 # Establish thresholds to use for max(Rhat), number of divergent transitions,
 #    and mean(n_eff)
 RhatThresh <- 1.1
-DivThresh <- 0
+PrelimDivThresh <- 5
+FinalDivThresh <- 0
 NeffThresh <- 1500
 
 # Set the credible interval threshold for inclusion as a non-generic term
 IntLevel <- 0.5
 
 # Set the file paths to be passed to the nodes
-PrelimStanPath <- "/project/commbayes/SparseInteractions/Prelim_monoLambda_envAlpha.stan"
-FinalStanPath <- "/project/commbayes/SparseInteractions/Final_monoLambda_envAlpha.stan"
+PrelimStanPath <- "/project/commbayes/SparseInteractions/BH_sims/Prelim_monoLambda_envAlpha.stan"
+FinalStanPath <- "/project/commbayes/SparseInteractions/BH_sims/Final_monoLambda_envAlpha.stan"
 
 # Create the data vectors to be passed to the nodes
 PrelimDataVec <- c("N", "S", "Nt", "Ntp1", "SpMatrix", "env", "Intra", "tau0", "slab_scale", "slab_df")
@@ -103,7 +104,7 @@ ModelFit <- function(i){
      # Now run the preliminary fit of the model
      N <- 2*N
      PrelimFit <- stan(file = PrelimStanPath, data = PrelimDataVec, iter = 3000,
-                       chains = 3, control = list(adapt_delta = 0.95, max_treedepth = 15))
+                       chains = 3, control = list(adapt_delta = 0.99, max_treedepth = 15))
      
      # Now assess model diagnostics
      PrelimMaxRhat <- max(summary(PrelimFit)$summary[,"Rhat"])
@@ -115,7 +116,7 @@ ModelFit <- function(i){
           else return(0)
      }))
      
-     if((PrelimMaxRhat > RhatThresh) | (PrelimMeanNeff < NeffThresh) | (PrelimNumDiv > DivThresh)){
+     if((PrelimMaxRhat > RhatThresh) | (PrelimMeanNeff < NeffThresh) | (PrelimNumDiv > PrelimDivThresh)){
           CurResults <- list(LambdaIntDev = NA, LambdaSlopeDev = NA, IntraIntDev = NA,
                           IntraSlopeDev = NA, GenericIntDev = NA, GenericSlopeDev = NA, NonGenericIntDev = NA,
                           NonGenericSlopeDev = NA, NumNonGenericInt = NA, NumNonGenericSlope = NA,
@@ -157,7 +158,7 @@ ModelFit <- function(i){
           
           # Run the final fit of the model
           FinalFit <- stan(file = FinalStanPath, data = FinalDataVec, iter = 3000,
-                           chains = 3, init = InitVals, control = list(adapt_delta = 0.95, max_treedepth = 15))
+                           chains = 3, init = InitVals, control = list(adapt_delta = 0.99, max_treedepth = 15))
           
           # Now assess model diagnostics
           FinalMaxRhat <- max(summary(FinalFit)$summary[,"Rhat"])
@@ -169,7 +170,7 @@ ModelFit <- function(i){
                else return(0)
           }))
           
-          if((FinalMaxRhat > RhatThresh) | (FinalMeanNeff < NeffThresh) | (FinalNumDiv > DivThresh)){
+          if((FinalMaxRhat > RhatThresh) | (FinalMeanNeff < NeffThresh) | (FinalNumDiv > FinalDivThresh)){
                CurResults <- list(LambdaIntDev = NA, LambdaSlopeDev = NA, IntraIntDev = NA,
                                IntraSlopeDev = NA, GenericIntDev = NA, GenericSlopeDev = NA, NonGenericIntDev = NA,
                                NonGenericSlopeDev = NA, NumNonGenericInt = NumNonGenericInt, NumNonGenericSlope = NumNonGenericSlope,
@@ -211,9 +212,16 @@ ModelFit <- function(i){
                          AllNonGenericSlopeDev <- c(AllNonGenericSlopeDev, CurSlopeDev)
                     }
                }
-               NonGenericIntDev <- mean(AllNonGenericIntDev)
-               NonGenericSlopeDev <- mean(AllNonGenericSlopeDev)
-               
+               if(length(AllNonGenericIntDev) > 0){
+                    NonGenericIntDev <- mean(AllNonGenericIntDev)
+               }else{
+                    NonGenericIntDev <- NA
+               }
+               if(length(AllNonGenericSlopeDev) > 0){
+                    NonGenericSlopeDev <- mean(AllNonGenericSlopeDev)
+               }else{
+                    NonGenericSlopeDev <- NA
+               }
                #### Calculate the Root Mean Squared Error
                # First, calculate the observed growth in the out-of-sample data for othe posterior predictive check
                max_N <- 200
@@ -260,7 +268,7 @@ ModelFit <- function(i){
                # Now calculate the posterior RMSE for growth predictions
                GrowthRMSE <- rep(NA, PostLength)
                for(p in 1:PostLength){
-                         deviation_sq <- (Growth_pred[p,,n] - Growth_ppc)^2
+                         deviation_sq <- (Growth_pred[p,] - Growth_ppc)^2
                          GrowthRMSE[p] <- sqrt(sum(deviation_sq) / N_ppc)
                }
                RMSE <- mean(GrowthRMSE)
@@ -277,48 +285,32 @@ ModelFit <- function(i){
    return(CurResults)
 }
 
-# Create a vector of parameter index values for the parallel computation
-FitVec <- 1:nrow(MainSimResults)
-
-# Create the cluster and run the simulations
-cl <- makeCluster(TotalTasks - 1, type = "MPI")
-
-# Export the necessary objects to each node
-ObjectsToExport <- c("MainSimResults", "RhatThresh", "DivThresh", "NeffThresh", "IntLevel",
-                     "PrelimStanPath", "FinalStanPath", "PrelimDataVec", "FinalDataVec")
-clusterExport(cl, ObjectsToExport)
-
-# Load rstan on each node
-temp <- clusterEvalQ(cl, library(rstan))
-
-# Run the model fits
-Fits <- clusterApply(cl, x = FitVec, fun = ModelFit)
-
-
 # Extract the results, population the Results matrix, and save the output
-for(i in 1:nrow(MainSimResults)){
-     MainSimResults$LambdaIntDev[i] <- Fits[[i]]$LambdaIntDev
-     MainSimResults$LambdaSlopeDev[i] <- Fits[[i]]$LambdaSlopeDev
-     MainSimResults$IntraIntDev[i] <- Fits[[i]]$IntraIntDev
-     MainSimResults$IntraSlopeDev[i] <- Fits[[i]]$IntraSlopeDev
-     MainSimResults$GenericIntDev[i] <- Fits[[i]]$GenericIntDev
-     MainSimResults$GenericSlopeDev[i] <- Fits[[i]]$GenericSlopeDev
-     MainSimResults$NonGenericIntDev[i] <- Fits[[i]]$NonGenericIntDev
-     MainSimResults$NonGenericSlopeDev[i] <- Fits[[i]]$NonGenericSlopeDev
-     MainSimResults$NumNonGenericInt[i] <- Fits[[i]]$NumNonGenericInt
-     MainSimResults$NumNonGenericSlope[i] <- Fits[[i]]$NumNonGenericSlope
-     MainSimResults$NumNonGenericSpecies[i] <- Fits[[i]]$NumNonGenericSpecies
-     MainSimResults$RMSE[i] <- Fits[[i]]$RMSE
-     MainSimResults$PrelimMaxRhat[i] <- Fits[[i]]$PrelimMaxRhat
-     MainSimResults$PrelimMeanNeff[i] <- Fits[[i]]$PrelimMeanNeff
-     MainSimResults$PrelimNumDiv[i] <- Fits[[i]]$PrelimNumDiv
-     MainSimResults$FinalMaxRhat[i] <- Fits[[i]]$FinalMaxRhat
-     MainSimResults$FinalMeanNeff[i] <- Fits[[i]]$FinalMeanNeff
-     MainSimResults$FinalNumDiv[i] <- Fits[[i]]$FinalNumDiv
+for(i in 1:length(SimIDs)){
+   CurFit <- ModelFit(i)
+     MainSimResults$LambdaIntDev[i] <- CurFit$LambdaIntDev
+     MainSimResults$LambdaSlopeDev[i] <- CurFit$LambdaSlopeDev
+     MainSimResults$IntraIntDev[i] <- CurFit$IntraIntDev
+     MainSimResults$IntraSlopeDev[i] <- CurFit$IntraSlopeDev
+     MainSimResults$GenericIntDev[i] <- CurFit$GenericIntDev
+     MainSimResults$GenericSlopeDev[i] <- CurFit$GenericSlopeDev
+     MainSimResults$NonGenericIntDev[i] <- CurFit$NonGenericIntDev
+     MainSimResults$NonGenericSlopeDev[i] <- CurFit$NonGenericSlopeDev
+     MainSimResults$NumNonGenericInt[i] <- CurFit$NumNonGenericInt
+     MainSimResults$NumNonGenericSlope[i] <- CurFit$NumNonGenericSlope
+     MainSimResults$NumNonGenericSpecies[i] <- CurFit$NumNonGenericSpecies
+     MainSimResults$RMSE[i] <- CurFit$RMSE
+     MainSimResults$PrelimMaxRhat[i] <- CurFit$PrelimMaxRhat
+     MainSimResults$PrelimMeanNeff[i] <- CurFit$PrelimMeanNeff
+     MainSimResults$PrelimNumDiv[i] <- CurFit$PrelimNumDiv
+     MainSimResults$FinalMaxRhat[i] <- CurFit$FinalMaxRhat
+     MainSimResults$FinalMeanNeff[i] <- CurFit$FinalMeanNeff
+     MainSimResults$FinalNumDiv[i] <- CurFit$FinalNumDiv
+     write.csv(MainSimResults, file = OutputFile, row.names = FALSE, quote = FALSE)
 }
 
 # Save the results
-write.csv(AllSims, file = "MainSimResults_10.csv", row.names = FALSE, quote = FALSE)
+# write.csv(AllSims, file = "MainSimResults_10.csv", row.names = FALSE, quote = FALSE)
 
 
 
