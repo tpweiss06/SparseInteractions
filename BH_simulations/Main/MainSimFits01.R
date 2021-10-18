@@ -309,8 +309,6 @@ for(i in 1:length(SimIDs)){
      write.csv(MainSimResults, file = OutputFile, row.names = FALSE, quote = FALSE)
 }
 
-# Save the results
-# write.csv(AllSims, file = "MainSimResults_10.csv", row.names = FALSE, quote = FALSE)
 
 
 
