@@ -286,7 +286,7 @@ ModelFit <- function(i){
 }
 
 # Extract the results, population the Results matrix, and save the output
-for(i in 1:length(SimIDs){
+for(i in 1:length(SimIDs)){
    CurFit <- ModelFit(i)
      MainSimResults$LambdaIntDev[i] <- CurFit$LambdaIntDev
      MainSimResults$LambdaSlopeDev[i] <- CurFit$LambdaSlopeDev
