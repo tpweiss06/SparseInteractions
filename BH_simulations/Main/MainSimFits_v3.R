@@ -12,7 +12,7 @@ rm(list = ls())
 
 # Set the number of nodes and the number of tasks per node
 # NOTE: this should match the .sh file
-nodes <- 1
+nodes <- 20
 ntasks_per_node <- 32
 TotalTasks <- nodes*ntasks_per_node
 
@@ -22,7 +22,7 @@ library(Rmpi)
 library(rstan)
 
 # Load in the simulation data
-load("test_multiple_simulations.RData")
+load("BH_simulations_1200.RData")
 
 # Create a data frame with columns for each of the values specified in the file
 #    header
@@ -296,7 +296,7 @@ cl <- makeCluster(TotalTasks - 1, type = "MPI", outfile = "MainSimFits_v3.txt")
 
 # Export the necessary objects to each node
 ObjectsToExport <- c("MainSimResults", "RhatThresh", "PrelimDivThresh", "NeffThresh", "IntLevel",
-                     "PrelimStanPath", "FinalStanPath", "PrelimDataVec", "FinalDataVec", "FinalDivThresh")
+                     "PrelimStanPath", "FinalStanPath", "PrelimDataVec", "FinalDataVec", "FinalDivThresh", "simulations")
 clusterExport(cl, ObjectsToExport)
 
 # Load rstan on each node
@@ -329,4 +329,4 @@ for(i in 1:nrow(MainSimResults)){
 }
 
 # Save the results
-write.csv(MainSimResults, file = "MainSimResults_v3.csv", row.names = FALSE, quote = FALSE)
+write.csv(MainSimResults, file = "MainSimResults_RMPI.csv", row.names = FALSE, quote = FALSE)

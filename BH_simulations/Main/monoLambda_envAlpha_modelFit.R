@@ -18,16 +18,18 @@ N <- 200
 max_N <- 200
 FilePrefix <- paste("N", N, "_", sep = "")
 
-# Now assign the focal species and the file paths for the stan models
-Focal <- 6
+# Now assign the file paths for the stan models
 PrelimStanPath <- here("BH_simulations/Main/StanCode/Prelim_monoLambda_envAlpha.stan")
 FinalStanPath <- here("BH_simulations/Main/StanCode/Final_monoLambda_envAlpha.stan")
 
 # Load in the appropriate data
-FullSim <- read.csv(here("BH_simulations/Main/SimulationsDataFiles/simulation_new.csv"))
-TrueVals <- read.csv(here("BH_simulations/Main/SimulationsDataFiles/parameters_new.csv"))
-TrueAlphaMeans <- TrueVals$alpha.1
-TrueAlphaSlopes <- TrueVals$alpha.env #+ TrueVals$alpha.env.spec
+load(here("BH_simulations/test_multiple_simulations.RData"))
+ExampleSim <- simulations[[8]]
+TrueVals <- ExampleSim[[1]]
+FullSim <- ExampleSim[[2]]
+Focal <- which(TrueVals$focal == 1)
+TrueAlphaMeans <- TrueVals$alpha.8 #This simulation has species 8 as the focal
+TrueAlphaSlopes <- TrueVals$alpha.env 
 
 # assign some universal values to be used across model fits and graphs
 S <- 15
@@ -36,14 +38,6 @@ Intra[Focal] <- 1
 tau0 <- 1
 slab_df <- 4 
 slab_scale <- sqrt(2) 
-
-# Set initial values to avoid initial problems with the random number generator
-ChainInitials <- list(lambdas = c(TrueVals$lambda.mean[Focal], TrueVals$lambda.env[Focal]), 
-                      alpha_generic_tilde = c(mean(TrueAlphaMeans)/0.75 + 1, TrueAlphaSlopes[Focal]/0.5), 
-                      alpha_hat_ij_tilde = rep(0, S), alpha_hat_eij_tilde = rep(0, S), c2_tilde = 1.25,
-                      local_shrinkage_ij = rep(5, S), local_shrinkage_eij = rep(5, S) , tau_tilde = 15,
-                      alpha_intra_tilde = c(TrueAlphaMeans[Focal], TrueAlphaSlopes[Focal]))
-InitVals <- list(ChainInitials, ChainInitials, ChainInitials)
 
 # save the values for the posterior predictive checks
 ppc_data <- subset(FullSim, (species == Focal) & (run > max_N) & (time == 0) & (thinned == 0))
@@ -79,8 +73,13 @@ Ntp1 <- c(subset(FullSim, (species == Focal) & (run <= N) & (time == 1) & (thinn
 # Now run the preliminary fit of the model to assess parameter shrinkage
 N <- 2*N
 PrelimFit <- stan(file = PrelimStanPath, data = PrelimDataVec, iter = 3000,
-                  chains = 3, init = InitVals, control = list(adapt_delta = 0.9, max_treedepth = 15))
+                  chains = 3, control = list(adapt_delta = 0.99, max_treedepth = 15))
 PrelimPosteriors <- extract(PrelimFit)
+
+####
+save(PrelimFit, PrelimPosteriors, file = "~/Desktop/CurFit.rdata")
+load("~/Desktop/CurFit.rdata")
+####
 
 # Examine diagnostic plots and determine if the model fit is adequate to move
 #       forward with the final fit

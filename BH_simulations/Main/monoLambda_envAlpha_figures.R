@@ -47,10 +47,10 @@ for(i in 1:3){
 #       filled squares. Intraspecific alpha points will be filled triangles. Species specific
 #       interspecific alpha terms estimated by the model will be filled circles. The generic
 #       interspecific alpha terms estimated by the model will be open circles.
-Focal <- 6
+Focal <- 8
 S <- 15
-ppc_Range <- c(-1.75, 3)
-param_xRange <- c(-5, 5)
+ppc_Range <- c(-2.5, 3)
+param_xRange <- c(-7, 7)
 param_yRange <- c(0, 6)
 
 # Determine the maximum number of species with non-generic alpha terms
@@ -70,8 +70,8 @@ InterceptOffset <- 0.55
 SlopeOffset <- 0.45
 Generic_y <- c(InterceptOffset, SlopeOffset)
 NonGeneric_y <- matrix(data = NA, nrow = NumNonGeneric, ncol = 2)
-NonGeneric_y[,1] <- 1.35 #c(1.35, 1.95, 2.55, 3.15, 3.75)
-NonGeneric_y[,2] <- 1.25 #c(1.25, 1.85, 2.45, 3.05, 3.65)
+NonGeneric_y[,1] <- c(1.35, 1.95, 2.55, 3.15, 3.75)
+NonGeneric_y[,2] <- c(1.25, 1.85, 2.45, 3.05, 3.65)
 Intra_y <- c(4 + InterceptOffset, 4 + SlopeOffset)
 Lambda_y <- c(5 + InterceptOffset, 5 + SlopeOffset)
 
@@ -94,23 +94,24 @@ Letters <- matrix(c(expression(bold("a")), expression(bold("b")), expression(bol
                     expression(bold("d")), expression(bold("e")), expression(bold("f"))),
                     nrow = 3, ncol = 2, byrow = TRUE)
 
-FigName <- here("BH_simulations/Main/SimResults_R1.pdf")
+FigName <- here("BH_simulations/Main/SimResults.pdf")
 pdf(file = FigName, width = 7, height = 8, onefile = FALSE, paper = "special")
      par(mfrow = c(3,2), mar = c(2, 2.5, 2, 2.5), oma = c(2, 0, 2, 0))
      for(i in 1:3){
           # Plot the parameters
           plot(NA, NA, xlim = param_xRange, ylim = param_yRange, xlab = "",
                ylab = "", axes = FALSE)
-          axis(side = 1, at = -7:7, tcl = -0.5)
+          axis(side = 1, at = seq(-6, 6, by = 2), tcl = -0.5)
+          axis(side = 1, at = -7:7, tcl = -0.5, labels = FALSE)
           axis(side = 1, at = seq(-8, 8, by = 0.5), tcl = -0.25, labels = FALSE)
           # Add boxes for intraspecifc and generic alpha components
-          rect(xleft = -5, ybottom = 5, xright = 5, ytop = 6, col = "grey", border = NA, xpd = NA)
+          rect(xleft = -7.5, ybottom = 5, xright = 7.5, ytop = 6, col = "grey", border = NA, xpd = NA)
           
-          rect(xleft = -5, ybottom = 1, xright = 5, ytop = 1.6, col = "grey", border = NA, xpd = NA)
-          rect(xleft = -5, ybottom = 1.6, xright = 5, ytop = 2.2, col = "lightgrey", border = NA, xpd = NA)
-          rect(xleft = -5, ybottom = 2.2, xright = 5, ytop = 2.8, col = "grey", border = NA, xpd = NA)
-          rect(xleft = -5, ybottom = 2.8, xright = 5, ytop = 3.4, col = "lightgrey", border = NA, xpd = NA)
-          rect(xleft = -5, ybottom = 3.4, xright = 5, ytop = 4, col = "grey", border = NA, xpd = NA)
+          rect(xleft = -7.5, ybottom = 1, xright = 7.5, ytop = 1.6, col = "grey", border = NA, xpd = NA)
+          rect(xleft = -7.5, ybottom = 1.6, xright = 7.5, ytop = 2.2, col = "lightgrey", border = NA, xpd = NA)
+          rect(xleft = -7.5, ybottom = 2.2, xright = 7.5, ytop = 2.8, col = "grey", border = NA, xpd = NA)
+          rect(xleft = -7.5, ybottom = 2.8, xright = 7.5, ytop = 3.4, col = "lightgrey", border = NA, xpd = NA)
+          rect(xleft = -7.5, ybottom = 3.4, xright = 7.5, ytop = 4, col = "grey", border = NA, xpd = NA)
           
           # Add points for the generic alpha terms
           points(x = GenericDeviations[[i]][1,1], Generic_y[1], pch = InterceptPoints, col = InterceptCol)
@@ -145,12 +146,12 @@ pdf(file = FigName, width = 7, height = 8, onefile = FALSE, paper = "special")
           segments(x0 = Lambdas[[i]][2,1], x1 = Lambdas[[i]][3,1], y0 = Lambda_y[1], y1 = Lambda_y[1], col = InterceptCol)
           segments(x0 = Lambdas[[i]][2,2], x1 = Lambdas[[i]][3,2], y0 = Lambda_y[2], y1 = Lambda_y[2], col = SlopeCol)
           # Add the labels
-          text(x = -3.5, y = NonGenericLab_y1, labels = NonGenericLab1, xpd = NA, cex = 1.5)
-          text(x = -3.5, y = NonGenericLab_y2, labels = NonGenericLab2, xpd = NA, cex = 1.5)
-          text(x = -3.5, y = NonGenericLab_y3, labels = NonGenericLab3, xpd = NA, cex = 1.5)
-          text(x = 3, y = GenericLab_y, labels = GenericLab, xpd = NA, cex = 1.5)
-          text(x = 3, y = IntraLab_y, labels = IntraLab, xpd = NA, cex = 1.5)
-          text(x = 3, y = LambdaLab_y, labels = LambdaLab, xpd = NA, cex = 1.5)
+          text(x = -5.5, y = NonGenericLab_y1, labels = NonGenericLab1, xpd = NA, cex = 1.5)
+          text(x = -5.5, y = NonGenericLab_y2, labels = NonGenericLab2, xpd = NA, cex = 1.5)
+          text(x = -5.5, y = NonGenericLab_y3, labels = NonGenericLab3, xpd = NA, cex = 1.5)
+          text(x = 5, y = GenericLab_y, labels = GenericLab, xpd = NA, cex = 1.5)
+          text(x = 5, y = IntraLab_y, labels = IntraLab, xpd = NA, cex = 1.5)
+          text(x = 5, y = LambdaLab_y, labels = LambdaLab, xpd = NA, cex = 1.5)
           segments(x0 = 0, y0 = 0, x1 = 0, y1 = 6, col = "black", lty = 2)
           if(i == 3){
                mtext("Parameter deviations", side = 1, line = 2.5)
@@ -169,8 +170,8 @@ pdf(file = FigName, width = 7, height = 8, onefile = FALSE, paper = "special")
           plot(x = NA, y = NA, xlim = ppc_Range, ylim = ppc_Range, xlab = "",
                ylab = "", las = 1)
           mtext("Predicted growth", side = 2, line = 2.5)
-          axis(1, at = seq(-2, 3, by = 0.25), tcl = -0.25, labels = FALSE)
-          axis(2, at = seq(-2, 3, by = 0.25), tcl = -0.25, labels = FALSE)
+          axis(1, at = seq(-2.5, 3, by = 0.25), tcl = -0.25, labels = FALSE)
+          axis(2, at = seq(-2.5, 3, by = 0.25), tcl = -0.25, labels = FALSE)
           points(x = Growth_ppc, y = ppcPreds[[i]][1,], pch = 1, col = ppcCol)
           segments(x0 = Growth_ppc, y0 = ppcPreds[[i]][2,], 
                    x1 = Growth_ppc, y1 = ppcPreds[[i]][3,], col = ppcCol)
