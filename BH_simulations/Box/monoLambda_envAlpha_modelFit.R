@@ -16,8 +16,8 @@ rstan_options(auto_write = TRUE)
 # Set the current sample size and associated prefix for all graph and result
 #    file names
 
-N <- 200
-max_N <- 200
+N <- 150
+max_N <- 150
 FilePrefix <- paste("N", N, "_", sep = "")
 
 # assign the file paths for the stan models

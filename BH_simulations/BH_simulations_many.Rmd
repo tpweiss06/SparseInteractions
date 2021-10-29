@@ -106,7 +106,7 @@ BH.env <- function(df.in, n.runs, t.steps, p.start, env, dem.het = FALSE, lambda
 }
 ```
 
-Single simulation run. sUses the functions above to simulate plot communities deterministically to near-equilibrium values, perturb species populations, and then look at stochastic population change from that perturbed state to the following time step. Has default inputs for standard function runs.
+Single simulation run. Uses the functions above to simulate plot communities deterministically to near-equilibrium values, perturb species populations, and then look at stochastic population change from that perturbed state to the following time step. Has default inputs for standard function runs.
 ```{r run-simulation}
 run.simulation <- function(x, num.species = 15, num.runs = 500, pre.time.steps = 20, env.variation = 1,
                            pop.start.mean = 80, pop.start.sd = 50, thinned = TRUE, num.runs.thinned = 200,
