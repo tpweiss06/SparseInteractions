@@ -12,7 +12,7 @@ rm(list = ls())
 
 # Set the number of nodes and the number of tasks per node
 # NOTE: this should match the .sh file
-nodes <- 20
+nodes <- 1
 ntasks_per_node <- 32
 TotalTasks <- nodes*ntasks_per_node
 
@@ -22,31 +22,32 @@ library(Rmpi)
 library(rstan)
 
 # Load in the simulation data
-load("BH_simulations_1200.RData")
+load("BH_simulations_low_1200.RData")
 
 # Create a data frame with columns for each of the values specified in the file
 #    header
-Nsims <- length(simulations)
-SimID <- rep(1:Nsims, each = 3)
-Size <- rep(c(10, 50, 200), Nsims)
-LambdaIntDev <- rep(NA, Nsims*3)
-LambdaSlopeDev <- rep(NA, Nsims*3)
-IntraIntDev <- rep(NA, Nsims*3)
-IntraSlopeDev <- rep(NA, Nsims*3)
-GenericIntDev <- rep(NA, Nsims*3)
-GenericSlopeDev <- rep(NA, Nsims*3)
-NonGenericIntDev <- rep(NA, Nsims*3)
-NonGenericSlopeDev <- rep(NA, Nsims*3)
-NumNonGenericInt <- rep(NA, Nsims*3)
-NumNonGenericSlope <- rep(NA, Nsims*3)
-NumNonGenericSpecies <- rep(NA, Nsims*3)
-RMSE <- rep(NA, Nsims*3)
-PrelimMaxRhat <- rep(NA, Nsims*3)
-PrelimNumDiv <- rep(NA, Nsims*3)
-PrelimMeanNeff <- rep(NA, Nsims*3)
-FinalMaxRhat <- rep(NA, Nsims*3)
-FinalNumDiv <- rep(NA, Nsims*3)
-FinalMeanNeff <- rep(NA, Nsims*3)
+#Nsims <- length(simulations)
+Nsims <- 100
+SimID <- 1:Nsims
+Size <- rep(50, Nsims)
+LambdaIntDev <- rep(NA, Nsims)
+LambdaSlopeDev <- rep(NA, Nsims)
+IntraIntDev <- rep(NA, Nsims)
+IntraSlopeDev <- rep(NA, Nsims)
+GenericIntDev <- rep(NA, Nsims)
+GenericSlopeDev <- rep(NA, Nsims)
+NonGenericIntDev <- rep(NA, Nsims)
+NonGenericSlopeDev <- rep(NA, Nsims)
+NumNonGenericInt <- rep(NA, Nsims)
+NumNonGenericSlope <- rep(NA, Nsims)
+NumNonGenericSpecies <- rep(NA, Nsims)
+RMSE <- rep(NA, Nsims)
+PrelimMaxRhat <- rep(NA, Nsims)
+PrelimNumDiv <- rep(NA, Nsims)
+PrelimMeanNeff <- rep(NA, Nsims)
+FinalMaxRhat <- rep(NA, Nsims)
+FinalNumDiv <- rep(NA, Nsims)
+FinalMeanNeff <- rep(NA, Nsims)
 MainSimResults <- data.frame(SimID, Size, LambdaIntDev, LambdaSlopeDev, IntraIntDev,
                              IntraSlopeDev, GenericIntDev, GenericSlopeDev, NonGenericIntDev,
                              NonGenericSlopeDev, NumNonGenericInt, NumNonGenericSlope,
@@ -292,7 +293,7 @@ ModelFit <- function(i){
 FitVec <- 1:nrow(MainSimResults)
 
 # Create the cluster and run the simulations
-cl <- makeCluster(TotalTasks - 1, type = "MPI", outfile = "MainSimFits_v3.txt")
+cl <- makeCluster(TotalTasks - 1, type = "MPI", outfile = "LowAlphaFits.txt")
 
 # Export the necessary objects to each node
 ObjectsToExport <- c("MainSimResults", "RhatThresh", "PrelimDivThresh", "NeffThresh", "IntLevel",
@@ -329,4 +330,4 @@ for(i in 1:nrow(MainSimResults)){
 }
 
 # Save the results
-write.csv(MainSimResults, file = "MainSimResults_RMPI.csv", row.names = FALSE, quote = FALSE)
+write.csv(MainSimResults, file = "LowAlphaTestResults.csv", row.names = FALSE, quote = FALSE)

@@ -1,17 +1,20 @@
 #!/bin/bash -l
 
 #SBATCH --account=commbayes
-#SBATCH --time=72:00:00
-#SBATCH --nodes=20
+#SBATCH --time=24:00:00
+#SBATCH --nodes=1
 #SBATCH --ntasks-per-node=32
 #SBATCH --cpus-per-task=1
+#SBATCH --mem-per-cpu=1536M
 #SBATCH --mail-type=ALL
 #SBATCH --mail-user=cweissle@uwyo.edu
-#SBATCH --job-name=SparseInteractions_Rmpi
+#SBATCH --job-name=LowAlphaTest
+
+# Max allowable is <4096M
 
 # Set the parameter combination to use and generate names of R scripts and log files
-Rscript=MainSimFits_v3.R
-LogFile=MainSimFits_v3.log
+Rscript=LowAlphaSimFits.R
+LogFile=LowAlphaSimFits.log
 
 # Change to the relevant working directory
 cd /project/commbayes/SparseInteractions/BH_sims/
