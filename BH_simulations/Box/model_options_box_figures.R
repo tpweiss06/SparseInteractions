@@ -150,7 +150,7 @@ p.opt <- ggplot(lambda.ei.small, aes(x = env.seq, y = lambda.opt)) +
 
 ### Box figure part 2: different options for alpha------------
 # Create lists for the results from different sizes of datasets
-sample.size <- c(10, 20, 50, 80, 100, 200)
+sample.size <- c(20, 50, 100, 200)
 file.prefixes <- paste('N', sample.size, '_', sep = "")
 n.samples <- length(file.prefixes)
 alpha.type <- c('envAlpha', 'constAlpha')
@@ -167,7 +167,11 @@ alpha.fit <- tibble(sample.size = rep(sample.size, times = length(alpha.type)),
 # These paths are nested within the "Box" folder (this file's location)
 # and may need to be updated to the user's file structure
 
-FullSim <- read.csv(here("BH_simulations/Box/SimulationsDataFiles/simulation_perturb2.csv"))
+#FullSim <- read.csv(here("BH_simulations/Box/SimulationsDataFiles/simulation_perturb2.csv"))
+load('BH_simulations/test_multiple_simulations.rdata')
+sim <- simulations[[8]]
+FullSim <- sim$simulation
+
 ppc_data <- subset(FullSim, (species == Focal) & (run > 200) & (time == 0) & (thinned == 0))
 ppc_points <- which(ppc_data$pop > 0)
 ppc_runs <- ppc_data$run[ppc_points]
@@ -273,7 +277,10 @@ for(sn in 1:n.samples){
 # These paths are nested within the "Box" folder (this file's location)
 # and may need to be updated to the user's file structure
 
-FullSim <- read.csv(here("BH_simulations/Box/SimulationsDataFiles/simulation_perturb2_const.csv"))
+#FullSim <- read.csv(here("BH_simulations/Box/SimulationsDataFiles/simulation_perturb2_const.csv"))
+FullSim <- read.csv(here("BH_simulations/Box/SimulationsDataFiles/simulation_const.csv")) %>%
+        select(-X)
+
 ppc_data <- subset(FullSim, (species == Focal) & (run > 200) & (time == 0) & (thinned == 0))
 ppc_points <- which(ppc_data$pop > 0)
 ppc_runs <- ppc_data$run[ppc_points]

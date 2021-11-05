@@ -9,25 +9,27 @@ library(here)
 library(rstan)
 library(HDInterval)
 library(RColorBrewer)
+library(tidyverse)
 options(mc.cores = parallel::detectCores())
 rstan_options(auto_write = TRUE)
 
 # Set the current sample size and associated prefix for all graph and result
 #    file names
-N <- 20
+N <- 200
 max_N <- 200
 FilePrefix <- paste("N", N, "_", sep = "")
 
 # Now assign the focal species and the file paths for the stan models
 # These paths are within the "Box" folder (this file's location), and may need to be updated
 # to the user's file structure
-Focal <- 1
+Focal <- 8
 PrelimStanPath <- here("BH_simulations/Box/StanCode/Prelim_monoLambda_constAlpha.stan")
 FinalStanPath <- here("BH_simulations/Box/StanCode/Final_monoLambda_constAlpha.stan")
 
 # Load in the appropriate data
-FullSim <- read.csv(here("BH_simulations/Box/SimulationsDataFiles/simulation_perturb2_const.csv"))
-TrueVals <- read.csv(here("BH_simulations/Box/SimulationsDataFiles/parameters_perturb2_const.csv"))
+FullSim <- read.csv(here("BH_simulations/Box/SimulationsDataFiles/simulation_const.csv")) %>%
+        select(-X)
+TrueVals <- read.csv(here("BH_simulations/Box/SimulationsDataFiles/parameters_const.csv"))
 TrueAlphas <- TrueVals$alpha.1
 
 # assign some universal values to be used across model fits and graphs

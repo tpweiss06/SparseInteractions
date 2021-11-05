@@ -12,27 +12,35 @@ library(RColorBrewer)
 options(mc.cores = parallel::detectCores())
 rstan_options(auto_write = TRUE)
 
+
 # Set the current sample size and associated prefix for all graph and result
 #    file names
 
-N <- 50
-max_N <- 200
+N <- 150
+max_N <- 150
 FilePrefix <- paste("N", N, "_", sep = "")
 
-# Now assign the focal species and the file paths for the stan models
+# assign the file paths for the stan models
 # These paths are within the "Box" folder (this file's location), and may need to be updated
 # to the user's file structure
-Focal <- 1
 PrelimStanPath <- here("BH_simulations/Box/StanCode/Prelim_monoLambda_envAlpha.stan")
 FinalStanPath <- here("BH_simulations/Box/StanCode/Final_monoLambda_envAlpha.stan")
 
 # Load in the appropriate data
-# These paths are within the "Box" folder (this file's location), and may need to be updated
-# to the user's file structure
-FullSim <- read.csv(here("BH_simulations/Box/SimulationsDataFiles/simulation_perturb2.csv"))
-TrueVals <- read.csv(here("BH_simulations/Box/SimulationsDataFiles/parameters_perturb2.csv"))
+# These paths are may need to be updated to the user's file structure
+
+load('BH_simulations/test_multiple_simulations.rdata')
+sim <- simulations[[8]]
+FullSim <- sim$simulation
+TrueVals <- sim$parameters
+
+# determine the focal species 
+# (selected in the simulation phase and labeled in the parameters column)
+Focal <- which(TrueVals$focal == 1)
+
+
 TrueAlphaMeans <- TrueVals$alpha.1
-TrueAlphaSlopes <- TrueVals$alpha.env.gen + TrueVals$alpha.env.spec
+TrueAlphaSlopes <- TrueVals$alpha.env
 
 # assign some universal values to be used across model fits and graphs
 S <- 15
@@ -84,7 +92,7 @@ Ntp1 <- c(subset(FullSim, (species == Focal) & (run <= N) & (time == 1) & (thinn
 # Now run the preliminary fit of the model to assess parameter shrinkage
 N <- 2*N
 PrelimFit <- stan(file = PrelimStanPath, data = PrelimDataVec, iter = 3000,
-                  chains = 3, init = InitVals, control = list(adapt_delta = 0.99, max_treedepth = 15))
+                  chains = 3, init = InitVals, control = list(adapt_delta = 0.95, max_treedepth = 15))
 PrelimPosteriors <- extract(PrelimFit)
 
 # Preliminary fit saved below (useful for comparing multiple runs or saving time later,
