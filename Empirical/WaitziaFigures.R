@@ -101,7 +101,6 @@ for(i in 1:EnvLength){
      SpecificPlot[2,1,2:3,i] <- HDInterval::hdi(Sp1Post)
 }
 
-#AlphaRange <- range(c(range(GenericPlot), range(IntraPlot), range(SpecificPlot)))
 AlphaRange <- c(0, 0.06)
 LambdaRange <- range(LambdaPlotVals)
 PhosRange <- range(ObsPhos, na.rm = TRUE)
@@ -194,6 +193,82 @@ pdf(file = FigName, width = 8, height = 6, onefile = FALSE, paper = "special")
           labels = expression(bold("d")), cex = 1.5)
 dev.off()
 
+############# Now make a supplemental figure with confidence intervals
 
+SuppFigName <- here("Empirical/WaitziaSuppFig.pdf")
+#AlphaRange <- range(c(range(GenericPlot, na.rm = TRUE), range(IntraPlot, na.rm = TRUE), range(SpecificPlot, na.rm = TRUE)))
+AlphaRange <- c(0, 0.1)
+PhosLetters <- c(expression(bold("a")), expression(bold("c")), expression(bold("e")))
+ShadeLetters <- c(expression(bold("b")), expression(bold("d")))
+pdf(file = SuppFigName, width = 8, height = 6, onefile = FALSE, paper = "special")
+   par(mfcol = c(3,2), oma = c(4,4,2,2), mar = c(2,2,2,2))
+   # Alpha results for phosphorous, divided among three panels for CI visibility
+   xLabels <- c("", "", "Standardized phosphorous")
+   for(i in 1:3){
+      if(i == 3){
+         plot(NA, NA, xlim = PhosRange, ylim = c(0,0.04), main = "", xlab = xLabels[i], 
+              ylab = AlphaLab, las = 1, xpd = NA, cex.lab = 1.5)
+      }else{
+         plot(NA, NA, xlim = PhosRange, ylim = AlphaRange, main = "", xlab = xLabels[i], 
+              ylab = AlphaLab, las = 1, xpd = NA, cex.lab = 1.5)
+      }
+      
+      axis(side = 1, at = seq(-2, 3, by = 0.25), labels = FALSE, tcl = -0.25)
+      axis(side = 2, at = seq(0, 0.1, by = 0.005), labels = FALSE, tcl = -0.25)
+      # Add the generic polygon and line
+      xCoords <- c(PlotPhos, PlotPhos[EnvLength:1])
+      yCoords <- c(GenericPlot[1,2,], GenericPlot[1,3,EnvLength:1])
+      polygon(x = xCoords, y = yCoords, border = NA, col = "grey")
+      lines(x = PlotPhos, y = GenericPlot[1,1,], lty = 1, lwd = 1.5)
+      if(i == 1){
+         # Add the lines for the intraspecific term
+         lines(x = PlotPhos, y = IntraPlot[1,1,], lwd = 1.5, col = IntraCol)
+         lines(x = PlotPhos, y = IntraPlot[1,2,], lty = 2, col = IntraCol)
+         lines(x = PlotPhos, y = IntraPlot[1,3,], lty = 2, col = IntraCol)
+         text(x = 0.5, y = 0.9*AlphaRange[2], labels = PhosLegend[2], col = IntraCol, cex = 1.5)
+      }else{
+         lines(x = PlotPhos, y = SpecificPlot[1,i-1,1,], lwd = 1.5, col = AlphaCols[i-1])
+         lines(x = PlotPhos, y = SpecificPlot[1,i-1,2,], lty = 2, col = AlphaCols[i-1])
+         lines(x = PlotPhos, y = SpecificPlot[1,i-1,3,], lty = 2, col = AlphaCols[i-1])
+         if(i == 3){
+            text(x = 0.5, y = 0.035, labels = PhosLegend[i+1], col = AlphaCols[i-1], cex = 1.5)
+            text(x = 0.95*PhosRange[1], y = 0.036, 
+                 labels = PhosLetters[i], cex = 1.5)
+         }else{
+            text(x = 0.5, y = 0.9*AlphaRange[2], labels = PhosLegend[i+1], col = AlphaCols[i-1], cex = 1.5)
+         }
+      }
+      text(x = 0.95*PhosRange[1], y = 0.95*AlphaRange[2], 
+           labels = PhosLetters[i], cex = 1.5)
+   }
+   
+   # Alpha results for canopy cover, divided among 2 panels
+   xLabels <- c("", "Standardized canopy cover")
+   for(i in 1:2){
+      plot(NA, NA, xlim = ShadeRange, ylim = AlphaRange, main = "", xlab = xLabels[i], 
+           ylab = "", las = 1, xpd = NA, cex.lab = 1.5)
+      axis(side = 1, at = seq(-2, 3, by = 0.25), labels = FALSE, tcl = -0.25)
+      axis(side = 2, at = seq(0, 0.1, by = 0.005), labels = FALSE, tcl = -0.25)
+      # Add the generic polygon and line
+      xCoords <- c(PlotShade, PlotShade[EnvLength:1])
+      yCoords <- c(GenericPlot[2,2,], GenericPlot[2,3,EnvLength:1])
+      polygon(x = xCoords, y = yCoords, border = NA, col = "grey")
+      lines(x = PlotShade, y = GenericPlot[2,1,], lty = 1, lwd = 1.5)
+      if(i == 1){
+         # Add the lines for the intraspecific term
+         lines(x = PlotShade, y = IntraPlot[2,1,], lwd = 1.5, col = IntraCol)
+         lines(x = PlotShade, y = IntraPlot[2,2,], lty = 2, col = IntraCol)
+         lines(x = PlotShade, y = IntraPlot[2,3,], lty = 2, col = IntraCol)
+         text(x = 0, y = 0.9*AlphaRange[2], labels = ShadeLegend[2], col = IntraCol, cex = 1.5)
+      }else{
+         lines(x = PlotShade, y = SpecificPlot[2,1,1,], lwd = 1.5, col = AlphaCols[1])
+         lines(x = PlotShade, y = SpecificPlot[2,1,2,], lty = 2, col = AlphaCols[1])
+         lines(x = PlotShade, y = SpecificPlot[2,1,3,], lty = 2, col = AlphaCols[1])
+         text(x = 0, y = 0.9*AlphaRange[2], labels = ShadeLegend[3], col = AlphaCols[i-1], cex = 1.5)
+      }
+      text(x = 0.95*ShadeRange[1], y = 0.95*AlphaRange[2], 
+           labels = ShadeLetters[i], cex = 1.5)
+   }
+dev.off()
 
 
