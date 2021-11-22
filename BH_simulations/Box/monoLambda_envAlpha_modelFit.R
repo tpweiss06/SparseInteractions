@@ -16,8 +16,8 @@ rstan_options(auto_write = TRUE)
 # Set the current sample size and associated prefix for all graph and result
 #    file names
 
-N <- 150
-max_N <- 150
+N <- 100
+max_N <- 200
 FilePrefix <- paste("N", N, "_", sep = "")
 
 # assign the file paths for the stan models
@@ -39,7 +39,7 @@ TrueVals <- sim$parameters
 Focal <- which(TrueVals$focal == 1)
 
 
-TrueAlphaMeans <- TrueVals$alpha.1
+TrueAlphaMeans <- TrueVals$alpha.8
 TrueAlphaSlopes <- TrueVals$alpha.env
 
 # assign some universal values to be used across model fits and graphs
@@ -93,7 +93,7 @@ Ntp1 <- c(subset(FullSim, (species == Focal) & (run <= N) & (time == 1) & (thinn
 N <- 2*N
 PrelimFit <- stan(file = PrelimStanPath, data = PrelimDataVec, iter = 3000,
                   chains = 3, init = InitVals, control = list(adapt_delta = 0.95, max_treedepth = 15))
-PrelimPosteriors <- extract(PrelimFit)
+PrelimPosteriors <- rstan::extract(PrelimFit)
 
 # Preliminary fit saved below (useful for comparing multiple runs or saving time later,
 # since each model fit can take some time to run)

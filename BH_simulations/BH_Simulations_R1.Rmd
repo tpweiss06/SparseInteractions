@@ -168,7 +168,7 @@ Parameters for $\alpha_{e,i,j}$ values:
 a.intra <- -3.5 # intraspecific competition
 
 a.mean <- -7 # competition mean 
-a.range <- 3 # width for uniform distribution
+a.range <- 3.5 # width for uniform distribution
 
 a.env.sd <- 1 # range for alpha-env interaction (sd for normal dist with mean of 0)
 
@@ -239,12 +239,12 @@ Alternative to the above three sections: Reading in a coefficient dataframe with
 
 # Or from a list of simulations
  #load('/BH_simulations/test_multiple_simulations.RData')
- sim <- simulations[[8]]
- parameters <- sim$parameters
+# sim <- simulations[[8]]
+# parameters <- sim$parameters
 
 # for constant alpha-environment
- df.coef <- sim$parameters
-df.coef$alpha.env <- 0
+# df.coef <- sim$parameters
+# df.coef$alpha.env <- 0
 ```
 
 ### Running the functions
@@ -318,8 +318,8 @@ if(thinned == TRUE){
      focal.species.options <- which(pop.present$n.present > (num.runs*.67))
      focal.species <- sample(focal.species.options, size = 1)
      
-     #df.coef$focal <- 0
-     #df.coef$focal[focal.species] <- 1
+     df.coef$focal <- 0
+     df.coef$focal[focal.species] <- 1
      
      num.focal <- length(focal.species)
      total.runs <- num.runs.thinned*num.focal
@@ -358,8 +358,8 @@ if(thinned == TRUE){
 
 ### Storing the output
 ```{r env-storing, eval=FALSE}
- write.csv(df.coef, file = here("BH_simulations/Box/SimulationsDataFiles/parameters_const.csv"))
- write.csv(df.result, file = here("BH_simulations/Box/SimulationsDataFiles/simulation_const.csv"))
+ write.csv(df.coef, file = here("BH_simulations/Box/SimulationsDataFiles/parameters_opt.csv"))
+ write.csv(df.result, file = here("BH_simulations/Box/SimulationsDataFiles/simulation_opt.csv"))
 # write.csv(df.eq, file = here('BH_simulations/Main/SimulationsDataFiles/warmup_x.csv')
 
 ```

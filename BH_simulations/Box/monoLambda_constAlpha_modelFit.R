@@ -9,7 +9,7 @@ library(here)
 library(rstan)
 library(HDInterval)
 library(RColorBrewer)
-library(tidyverse)
+#library(tidyverse)
 options(mc.cores = parallel::detectCores())
 rstan_options(auto_write = TRUE)
 
@@ -22,15 +22,22 @@ FilePrefix <- paste("N", N, "_", sep = "")
 # Now assign the focal species and the file paths for the stan models
 # These paths are within the "Box" folder (this file's location), and may need to be updated
 # to the user's file structure
-Focal <- 8
+#Focal <- 8
 PrelimStanPath <- here("BH_simulations/Box/StanCode/Prelim_monoLambda_constAlpha.stan")
 FinalStanPath <- here("BH_simulations/Box/StanCode/Final_monoLambda_constAlpha.stan")
 
 # Load in the appropriate data
-FullSim <- read.csv(here("BH_simulations/Box/SimulationsDataFiles/simulation_const.csv")) %>%
-        select(-X)
+FullSim <- read.csv(here("BH_simulations/Box/SimulationsDataFiles/simulation_const.csv"))
 TrueVals <- read.csv(here("BH_simulations/Box/SimulationsDataFiles/parameters_const.csv"))
-TrueAlphas <- TrueVals$alpha.1
+
+# determine the focal species 
+# (selected in the simulation phase and labeled in the parameters column)
+Focal <- which(TrueVals$focal == 1)
+
+TrueAlphas <- TrueVals$alpha.8
+#TrueAlphaMeans <- TrueVals$alpha.8
+#TrueAlphaSlopes <- TrueVals$alpha.env
+
 
 # assign some universal values to be used across model fits and graphs
 S <- 15
@@ -84,7 +91,7 @@ Ntp1 <- c(subset(FullSim, (species == Focal) & (run <= N) & (time == 1) & (thinn
 N <- length(Nt)
 PrelimFit <- stan(file = PrelimStanPath, data = PrelimDataVec, iter = 3000,
                   chains = 3, init = InitVals, control = list(max_treedepth = 15, adapt_delta = 0.995))
-PrelimPosteriors <- extract(PrelimFit)
+PrelimPosteriors <- rstan::extract(PrelimFit)
 FitFileName <- paste(here("BH_simulations/Box/StanFits/monoLambda_constAlpha/"), FilePrefix, "PrelimFit.rdata", sep = "")
 save(PrelimFit, PrelimPosteriors, file = FitFileName)
 
