@@ -7,12 +7,12 @@
 #SBATCH --cpus-per-task=1
 #SBATCH --mail-type=ALL
 #SBATCH --mail-user=cweissle@uwyo.edu
-#SBATCH --job-name=SparseInteractionsTrial
-#SBATCH --mem-per-cpu=128000
+#SBATCH --job-name=SparseInteractionsMainSim
+#SBATCH --mem-per-cpu=1536M
 
 # Set the parameter combination to use and generate names of R scripts and log files
-Rscript=MainSimFits01.R
-LogFile=MainSimFits01.log
+Rscript=MainSimFits.R
+LogFile=MainSimFits.log
 
 # Change to the relevant working directory
 cd /project/commbayes/SparseInteractions/BH_sims/
@@ -20,4 +20,4 @@ cd /project/commbayes/SparseInteractions/BH_sims/
 # Load R and MPI
 module load gcc/7.3.0 r/3.5.3 swset/2018.05  gcc/7.3.0 r-rstan/2.18.2-py27
 
-R < $Rscript > $LogFile --no-save 
+mpirun -np 1 R CMD BATCH --no-restore --no-save --quiet  $Rscript $LogFile

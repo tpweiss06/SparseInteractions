@@ -16,8 +16,8 @@ rstan_options(auto_write = TRUE)
 library(HDInterval)
 
 # Set the current number of simulations to run through
-SimIDs <- 801:900
-OutputFile <- "MainSimResults09.csv"
+SimIDs <- 1:1000
+OutputFile <- "MainSimResults.csv"
 
 # Load in the simulation data
 load("BH_simulations_1200.RData")
@@ -286,7 +286,7 @@ ModelFit <- function(i){
 }
 
 # Extract the results, population the Results matrix, and save the output
-for(i in 1:length(SimID)){
+for(i in 1:length(SimIDs)){
    CurFit <- ModelFit(i)
      MainSimResults$LambdaIntDev[i] <- CurFit$LambdaIntDev
      MainSimResults$LambdaSlopeDev[i] <- CurFit$LambdaSlopeDev
@@ -309,8 +309,6 @@ for(i in 1:length(SimID)){
      write.csv(MainSimResults, file = OutputFile, row.names = FALSE, quote = FALSE)
 }
 
-# Save the results
-# write.csv(AllSims, file = "MainSimResults_10.csv", row.names = FALSE, quote = FALSE)
 
 
 
